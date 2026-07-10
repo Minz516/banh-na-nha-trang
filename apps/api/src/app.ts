@@ -10,7 +10,6 @@ import authRoutes from './modules/auth/auth.routes.js';
 import customerRoutes from './modules/customer/customer.routes.js';
 import catalogRoutes from './modules/catalog/catalog.routes.js';
 import categoryRoutes from './modules/catalog/category.routes.js';
-import cartRoutes from './modules/cart/cart.routes.js';
 import orderRoutes from './modules/order/order.routes.js';
 import voucherRoutes from './modules/voucher/voucher.routes.js';
 import blogRoutes from './modules/blog/blog.routes.js';
@@ -18,13 +17,17 @@ import mediaRoutes from './modules/media/media.routes.js';
 
 // Event listeners (wire cross-module side-effects)
 import { registerCustomerEvents } from './modules/customer/customer.events.js';
+import { registerCatalogEvents } from './modules/catalog/catalog.events.js';
+import { registerVoucherEvents } from './modules/voucher/voucher.events.js';
 
 export function createApp(): express.Application {
   // Configure Cloudinary as early as possible
   configureCloudinary();
 
-  // Wire cross-module event listeners
+  // Wire cross-module event listeners (ORDER_PLACED / ORDER_CANCELLED / STOCK_LOW consumers)
   registerCustomerEvents();
+  registerCatalogEvents();
+  registerVoucherEvents();
 
   const app = express();
 
@@ -62,7 +65,6 @@ export function createApp(): express.Application {
   app.use('/api/customers', customerRoutes);
   app.use('/api/products', catalogRoutes);
   app.use('/api/categories', categoryRoutes);
-  app.use('/api/cart', cartRoutes);
   app.use('/api/orders', orderRoutes);
   app.use('/api/vouchers', voucherRoutes);
   app.use('/api/blog', blogRoutes);

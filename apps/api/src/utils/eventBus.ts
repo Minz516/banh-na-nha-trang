@@ -4,15 +4,13 @@ import { EventEmitter } from 'node:events';
  * Application event bus — singleton pub/sub for cross-module side effects.
  * Events listed here should never block the request that triggered them.
  *
- * Event table (SRS §4):
- *   USER_REGISTERED  : auth → customer (link userId to Customer)
+ * Event table:
  *   ORDER_PLACED     : order → customer (increment stats)
  *   ORDER_CANCELLED  : order → catalog (restock) + voucher (release) + customer (decrement)
  *   STOCK_LOW        : catalog → log only
  */
 
 export const AppEvents = {
-  USER_REGISTERED: 'USER_REGISTERED',
   ORDER_PLACED: 'ORDER_PLACED',
   ORDER_STATUS_CHANGED: 'ORDER_STATUS_CHANGED',
   ORDER_CANCELLED: 'ORDER_CANCELLED',

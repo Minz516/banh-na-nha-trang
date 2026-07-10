@@ -10,12 +10,11 @@ export const AuthRepository = {
     return UserModel.findById(id);
   },
 
-  async create(data: { email: string; password: string; phone?: string; role?: 'customer' | 'admin' }): Promise<IUser> {
+  async create(data: { email: string; password: string; phone?: string }): Promise<IUser> {
     const user = new UserModel({
       email: data.email,
       passwordHash: data.password, // hashed in pre-save hook
       phone: data.phone,
-      role: data.role ?? 'customer',
     });
     return user.save();
   },

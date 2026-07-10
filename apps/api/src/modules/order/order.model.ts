@@ -40,7 +40,6 @@ export interface IOrder {
   _id: mongoose.Types.ObjectId;
   orderNumber: string;
   customerId: mongoose.Types.ObjectId;
-  userId?: mongoose.Types.ObjectId;
   channel: 'online' | 'pos';
   customerSnapshot: ICustomerSnapshot;
   items: IOrderItem[];
@@ -110,7 +109,6 @@ const orderSchema = new Schema<IOrder>(
   {
     orderNumber: { type: String, required: true, unique: true },
     customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
-    userId: { type: Schema.Types.ObjectId, ref: 'User', sparse: true },
     channel: { type: String, enum: ['online', 'pos'], default: 'online' },
     customerSnapshot: { type: customerSnapshotSchema, required: true },
     items: { type: [orderItemSchema], required: true },

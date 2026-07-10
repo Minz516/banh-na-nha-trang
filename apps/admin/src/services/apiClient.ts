@@ -13,9 +13,10 @@ apiClient.interceptors.response.use(
     return response.data?.data ?? response.data;
   },
   (error) => {
-    // If backend returns 401 Unauthorized, automatically log out
+    // If backend returns 401 Unauthorized, the session is no longer valid server-side —
+    // reset local state only (no server round trip; the cookie is already gone/expired).
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
+      useAuthStore.getState().clearSession();
     }
     return Promise.reject(error.response?.data?.error || error);
   }

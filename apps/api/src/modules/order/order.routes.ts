@@ -1,23 +1,19 @@
 import { Router } from 'express';
 import { OrderController } from './order.controller.js';
-import { verifyToken, optionalVerifyToken } from '../../middlewares/authMiddleware.js';
-import { requireRole } from '../../middlewares/roleMiddleware.js';
-import { publicRateLimit } from '../../middlewares/rateLimitMiddleware.js';
+import { verifyToken } from '../../middlewares/authMiddleware.js';
+import { publicRateLimit, apiRateLimit, checkoutRateLimit } from '../../middlewares/rateLimitMiddleware.js';
 
 const router = Router();
 
-// Public / optional-auth
-router.post('/', optionalVerifyToken, ...OrderController.placeOrder);
+// Public — checkout is guest-only, no account required
+router.post('/', checkoutRateLimit, ...OrderController.placeOrder);
 router.post('/lookup', publicRateLimit, ...OrderController.lookup);
 
-// Authenticated user
-router.get('/me', verifyToken, OrderController.myOrders);
-
 // Admin only
-router.get('/', verifyToken, requireRole('admin'), OrderController.listOrders);
-router.post('/pos', verifyToken, requireRole('admin'), ...OrderController.posOrder);
-router.get('/:id', verifyToken, requireRole('admin'), OrderController.getOrder);
-router.patch('/:id/status', verifyToken, requireRole('admin'), ...OrderController.updateStatus);
-router.post('/:id/print', verifyToken, requireRole('admin'), OrderController.printOrder);
+router.get('/', verifyToken, apiRateLimit, OrderController.listOrders);
+router.post('/pos', verifyToken, apiRateLimit, ...OrderController.posOrder);
+router.get('/:id', verifyToken, apiRateLimit, OrderController.getOrder);
+router.patch('/:id/status', verifyToken, apiRateLimit, ...OrderController.updateStatus);
+router.post('/:id/print', verifyToken, apiRateLimit, OrderController.printOrder);
 
 export default router;

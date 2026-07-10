@@ -4,34 +4,6 @@ import { CustomerDTO } from './customer.dto.js';
 import { CustomerRepository } from './customer.repository.js';
 
 export const CustomerController = {
-  async getMe(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = req.user!.userId;
-      const customer = await CustomerService.getMyProfile(userId);
-      res.json({ success: true, message: 'OK', data: CustomerDTO.profileResponse(customer), meta: null });
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  async updateMe(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const customer = await CustomerService.updateProfile(req.user!.userId, req.body);
-      res.json({ success: true, message: 'Cập nhật thành công', data: CustomerDTO.profileResponse(customer), meta: null });
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  async addAddress(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const customer = await CustomerService.addAddress(req.user!.userId, req.body);
-      res.status(201).json({ success: true, message: 'Thêm địa chỉ thành công', data: CustomerDTO.profileResponse(customer), meta: null });
-    } catch (err) {
-      next(err);
-    }
-  },
-
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { search, page = '1', limit = '20' } = req.query as Record<string, string>;

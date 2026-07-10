@@ -13,7 +13,6 @@ export const CustomerRepository = {
     phone: string;
     fullName: string;
     email?: string;
-    userId?: string;
   }): Promise<ICustomer> {
     return CustomerModel.findOneAndUpdate(
       { phone: data.phone },
@@ -21,16 +20,11 @@ export const CustomerRepository = {
         $set: {
           fullName: data.fullName,
           ...(data.email ? { email: data.email } : {}),
-          ...(data.userId ? { userId: data.userId } : {}),
         },
         $setOnInsert: { phone: data.phone, totalOrders: 0, totalSpent: 0 },
       },
       { upsert: true, new: true }
     ) as Promise<ICustomer>;
-  },
-
-  async linkUser(phone: string, userId: string): Promise<void> {
-    await CustomerModel.updateOne({ phone }, { $set: { userId } });
   },
 
   async incrementStats(customerId: string, orderTotal: number): Promise<void> {
@@ -43,18 +37,6 @@ export const CustomerRepository = {
     await CustomerModel.findByIdAndUpdate(customerId, {
       $inc: { totalOrders: -1, totalSpent: -orderTotal },
     });
-  },
-
-  async update(id: string, data: Partial<Pick<ICustomer, 'fullName' | 'email' | 'dateOfBirth'>>): Promise<ICustomer | null> {
-    return CustomerModel.findByIdAndUpdate(id, { $set: data }, { new: true });
-  },
-
-  async addAddress(customerId: string, address: object): Promise<ICustomer | null> {
-    return CustomerModel.findByIdAndUpdate(
-      customerId,
-      { $push: { addresses: address } },
-      { new: true }
-    );
   },
 
   async list(query: { search?: string; page: number; limit: number }): Promise<{ customers: ICustomer[]; total: number }> {

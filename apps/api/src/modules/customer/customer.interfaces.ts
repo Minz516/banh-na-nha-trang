@@ -1,4 +1,4 @@
-import { CustomerModel, type ICustomer } from './customer.model.js';
+import type { ICustomer } from './customer.model.js';
 import { CustomerRepository } from './customer.repository.js';
 
 /**
@@ -10,7 +10,6 @@ export const CustomerInterfaces = {
     phone: string;
     fullName: string;
     email?: string;
-    userId?: string;
   }): Promise<ICustomer> {
     return CustomerRepository.upsertByPhone(data);
   },
@@ -31,14 +30,3 @@ export const CustomerInterfaces = {
     return CustomerRepository.findByPhone(phone);
   },
 };
-
-// Patch repository with findOne_byUserId helper (CustomerModel direct usage here only)
-CustomerRepository.findOne_byUserId = async (userId: string) =>
-  CustomerModel.findOne({ userId });
-
-// Augment the type
-declare module './customer.repository.js' {
-  interface CustomerRepositoryType {
-    findOne_byUserId(userId: string): Promise<ICustomer | null>;
-  }
-}

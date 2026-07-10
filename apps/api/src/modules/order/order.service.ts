@@ -11,7 +11,7 @@ export const OrderService = {
   /**
    * D3: Place order — atomic stock decrement per item, voucher consumption, customer upsert.
    */
-  async placeOrder(body: PlaceOrderBody, userId?: string): Promise<IOrder> {
+  async placeOrder(body: PlaceOrderBody): Promise<IOrder> {
     // 1. Resolve product snapshots and decrement stock atomically
     const resolvedItems: Array<{
       productSnapshot: { productId: string; name: string; slug: string; image: string | null; flavor: string | null };
@@ -81,7 +81,6 @@ export const OrderService = {
       phone: body.customerInfo.phone,
       fullName: body.customerInfo.fullName,
       email: body.customerInfo.email,
-      userId,
     });
 
     const total = Math.max(0, subtotal - discountAmount);
@@ -89,7 +88,6 @@ export const OrderService = {
     // 5. Persist order
     const order = await OrderRepository.create({
       customerId: customer._id,
-      userId: userId ? (customer.userId ?? undefined) : undefined,
       channel: 'online',
       customerSnapshot: {
         fullName: body.customerInfo.fullName,
@@ -107,13 +105,12 @@ export const OrderService = {
       note: body.note,
     });
 
-    // 6. Update customer stats
-    await CustomerInterfaces.incrementStats(customer._id.toString(), total);
-
-    // 7. Emit event for downstream use (admin notifications, etc.)
+    // 6. Emit event — customer.events listens for this to increment totalOrders/totalSpent.
+    // Non-blocking by design (eventBus.ts): the response never waits on this.
     eventBus.emit(AppEvents.ORDER_PLACED, {
       orderId: order._id.toString(),
       orderNumber: order.orderNumber,
+      customerId: customer._id.toString(),
       total,
     });
 
@@ -121,20 +118,17 @@ export const OrderService = {
   },
 
   /**
-   * D7: POS mode — admin places order on behalf of customer (no auth check on customer side).
+   * D7: POS mode — admin places an order at the counter; the customer is never authenticated.
    */
-  async posOrder(body: PosOrderBody, adminId: string): Promise<IOrder> {
+  async posOrder(body: PosOrderBody): Promise<IOrder> {
     // Reuse placeOrder logic with pos channel override
-    const order = await OrderService.placeOrder(
-      {
-        ...(body as PlaceOrderBody),
-        customerInfo: {
-          ...body.customerInfo,
-          address: body.customerInfo.address ?? 'POS - Tại quầy',
-        },
+    const order = await OrderService.placeOrder({
+      ...(body as PlaceOrderBody),
+      customerInfo: {
+        ...body.customerInfo,
+        address: body.customerInfo.address ?? 'POS - Tại quầy',
       },
-      adminId
-    );
+    });
 
     // Patch channel to 'pos'
     return OrderRepository.updateStatus(order._id.toString(), order.status, {}) as Promise<IOrder>;
@@ -150,10 +144,6 @@ export const OrderService = {
     const order = await OrderRepository.findByOrderNumberAndPhone(body.orderNumber, body.phone);
     if (!order) throw new AppError(404, 'Không tìm thấy đơn hàng với thông tin này');
     return order;
-  },
-
-  async getMyOrders(customerId: string, page: number, limit: number) {
-    return OrderRepository.listByCustomerId(customerId, page, limit);
   },
 
   async queryOrders(q: OrderQuery) {
@@ -176,22 +166,27 @@ export const OrderService = {
       throw new AppError(400, `Không thể chuyển từ "${order.status}" sang "${body.status}"`);
     }
 
-    // If cancelling, rollback stock and voucher
-    if (body.status === 'cancelled') {
-      for (const item of order.items) {
-        await CatalogInterfaces.incrementStock(item.productSnapshot.productId, item.quantity).catch(() => null);
-      }
-      if (order.voucherCode && order.customerSnapshot.phone) {
-        await VoucherInterfaces.releaseVoucher(order.voucherCode, order.customerSnapshot.phone).catch(() => null);
-      }
-      await CustomerInterfaces.decrementStats(order.customerId.toString(), order.total).catch(() => null);
-    }
-
     const updated = await OrderRepository.updateStatus(id, body.status as OrderStatus, {
       changedBy: adminId,
       cancelReason: body.cancelReason,
     });
     if (!updated) throw new AppError(404, 'Không tìm thấy đơn hàng');
+
+    // D4/D6: restock, release the voucher, and decrement customer stats — all three are
+    // handled by catalog.events / voucher.events / customer.events listening for this.
+    // Non-blocking by design (eventBus.ts): the response never waits on these.
+    if (body.status === 'cancelled') {
+      eventBus.emit(AppEvents.ORDER_CANCELLED, {
+        items: order.items.map((item) => ({
+          productId: item.productSnapshot.productId,
+          quantity: item.quantity,
+        })),
+        voucherCode: order.voucherCode,
+        phone: order.customerSnapshot.phone,
+        customerId: order.customerId.toString(),
+        total: order.total,
+      });
+    }
 
     eventBus.emit(AppEvents.ORDER_STATUS_CHANGED, {
       orderId: id,
@@ -201,9 +196,19 @@ export const OrderService = {
     return updated;
   },
 
+  /**
+   * D7: printable once the order has left `pending` and hasn't been `cancelled`.
+   * Reprints are unlimited; each call increments printCount.
+   */
   async printOrder(id: string): Promise<IOrder> {
-    const order = await OrderRepository.incrementPrintCount(id);
+    const order = await OrderRepository.findById(id);
     if (!order) throw new AppError(404, 'Không tìm thấy đơn hàng');
-    return order;
+    if (order.status === 'pending' || order.status === 'cancelled') {
+      throw new AppError(400, `Không thể in đơn hàng ở trạng thái "${order.status}"`);
+    }
+
+    const updated = await OrderRepository.incrementPrintCount(id);
+    if (!updated) throw new AppError(404, 'Không tìm thấy đơn hàng');
+    return updated;
   },
 };

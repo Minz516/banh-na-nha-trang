@@ -1,6 +1,5 @@
 import { OrderModel, type IOrder, type OrderStatus } from './order.model.js';
 import type { OrderQuery } from '@repo/shared-types';
-import mongoose from 'mongoose';
 
 /** Generate a sequential-looking human-friendly order number */
 function generateOrderNumber(): string {
@@ -32,19 +31,6 @@ export const OrderRepository = {
       orderNumber,
       'customerSnapshot.phone': phone,
     }).lean({ virtuals: true });
-  },
-
-  async listByCustomerId(customerId: string, page = 1, limit = 10) {
-    const skip = (page - 1) * limit;
-    const [items, total] = await Promise.all([
-      OrderModel.find({ customerId: new mongoose.Types.ObjectId(customerId) })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean({ virtuals: true }),
-      OrderModel.countDocuments({ customerId: new mongoose.Types.ObjectId(customerId) }),
-    ]);
-    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
   },
 
   async query(q: OrderQuery) {

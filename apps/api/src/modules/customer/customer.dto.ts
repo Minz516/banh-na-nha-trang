@@ -8,7 +8,6 @@ export const CustomerDTO = {
       fullName: customer.fullName,
       email: customer.email ?? null,
       dateOfBirth: customer.dateOfBirth?.toISOString() ?? null,
-      addresses: customer.addresses,
       totalOrders: customer.totalOrders,
       totalSpent: customer.totalSpent,
       createdAt: customer.createdAt.toISOString(),

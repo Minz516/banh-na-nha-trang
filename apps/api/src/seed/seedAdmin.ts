@@ -23,7 +23,6 @@ async function seedAdmin(): Promise<void> {
   await UserModel.create({
     email: ADMIN_EMAIL,
     passwordHash: ADMIN_PASSWORD_PLAIN,
-    role: 'admin',
     isActive: true,
   });
 

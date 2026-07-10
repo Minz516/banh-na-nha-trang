@@ -1,12 +1,18 @@
-import { RouterProvider, createBrowserRouter, Outlet, Navigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { RouterProvider, createBrowserRouter, Outlet, Navigate, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 
-// Admin Shell / Layout
+// Admin Shell / Layout — every child route here requires a verified session.
 const AdminLayout = () => {
-  const { isAuthenticated, logout } = useAuthStore();
-  
-  // Guard
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  const { status, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  if (status === 'unauthenticated') return <Navigate to="/login" replace />;
+
+  async function handleLogout() {
+    await logout();
+    navigate('/login', { replace: true });
+  }
 
   return (
     <div className="flex min-h-screen text-left w-full max-w-[100vw] text-gray-900 bg-gray-50 m-0">
@@ -18,8 +24,8 @@ const AdminLayout = () => {
           <Link to="/orders" className="hover:bg-gray-800 p-2 rounded text-gray-200 hover:text-white transition-colors">Orders</Link>
           <Link to="/vouchers" className="hover:bg-gray-800 p-2 rounded text-gray-200 hover:text-white transition-colors">Vouchers</Link>
           <Link to="/blog" className="hover:bg-gray-800 p-2 rounded text-gray-200 hover:text-white transition-colors">Blog</Link>
-          
-          <button onClick={logout} className="text-left mt-auto hover:bg-red-800 p-2 rounded text-red-300 w-full cursor-pointer transition-colors">Logout</button>
+
+          <button onClick={handleLogout} className="text-left mt-auto hover:bg-red-800 p-2 rounded text-red-300 w-full cursor-pointer transition-colors">Logout</button>
         </nav>
       </aside>
       <main className="flex-1 p-8 ml-64 overflow-y-auto min-h-screen w-full items-start justify-start flex-col">
@@ -32,19 +38,67 @@ const AdminLayout = () => {
 // Stubs for real pages
 const Dashboard = () => <div className="w-full text-left"><h2 className="text-2xl font-bold mb-4 text-gray-900">Dashboard</h2><p className="text-gray-600">Welcome to Bánh Tráng Nhà Na Admin.</p></div>;
 
-// We'll fake login to true for development layout viewing
 const Login = () => {
-  const setAuth = useAuthStore(state => state.setAuth);
+  const { status, login } = useAuthStore();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  if (status === 'authenticated') return <Navigate to="/" replace />;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await login(email, password);
+      navigate('/', { replace: true });
+    } catch (err) {
+      const message = (err as { message?: string })?.message ?? 'Đăng nhập thất bại';
+      setError(message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className="flex items-center justify-center min-h-[100svh] w-full text-left max-w-none bg-gray-50 flex-col py-10 mt-0 m-0">
-      <div className="bg-white p-8 rounded shadow max-w-md w-full m-auto mt-[20vh]">
-        <h1 className="text-2xl font-bold mb-4 text-gray-900">Admin Login</h1>
-        <button 
-          onClick={() => setAuth({ _id: '1', email: 'admin@banhtrangnhana.com', role: 'admin', isActive: true, createdAt: new Date(), updatedAt: new Date() } as any)}
-          className="bg-blue-600 text-white px-4 py-2 rounded font-medium hover:bg-blue-700 w-full cursor-pointer">
-          Click here to bypass login during dev
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow max-w-md w-full m-auto mt-[20vh]">
+        <h1 className="text-2xl font-bold mb-6 text-gray-900">Admin Login</h1>
+
+        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input
+          type="email"
+          required
+          autoFocus
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full border border-gray-300 rounded p-2 mb-4 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+          placeholder="admin@banhtrangnhana.com"
+        />
+
+        <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
+        <input
+          type="password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full border border-gray-300 rounded p-2 mb-4 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+          placeholder="••••••••"
+        />
+
+        {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="bg-blue-600 text-white px-4 py-2 rounded font-medium hover:bg-blue-700 w-full cursor-pointer disabled:opacity-50"
+        >
+          {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
-      </div>
+      </form>
     </div>
   );
 };
@@ -65,5 +119,22 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
+  const { status, checkSession } = useAuthStore();
+
+  useEffect(() => {
+    checkSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Verify the real session (via the httpOnly cookie) before any route renders — this
+  // is what makes AdminLayout's guard trustworthy instead of a client-spoofable flag.
+  if (status === 'checking') {
+    return (
+      <div className="flex items-center justify-center min-h-[100svh] w-full text-gray-500">
+        Đang tải...
+      </div>
+    );
+  }
+
   return <RouterProvider router={router} />;
 }

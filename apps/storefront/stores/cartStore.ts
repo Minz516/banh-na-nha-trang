@@ -50,6 +50,6 @@ export const useCartStore = create<CartState>()(
       },
       clearCart: () => set({ items: [], total: 0 }),
     }),
-    { name: 'cart-storage' }
+    { name: 'cart-storage', skipHydration: true }
   )
 );

@@ -2,7 +2,7 @@ import type { Metadata } from 'next/types';
 
 export const siteMetadata = {
   title: 'Bánh Tráng Nhà Na',
-  description: 'Đặc sản bánh tráng Nha Trang chính gốc',
+  description: 'Đặc sản bánh tráng Đà Lạt chính gốc',
   siteUrl: 'https://banhtrangnhana.com',
 };
 

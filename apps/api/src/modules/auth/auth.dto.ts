@@ -5,7 +5,6 @@ export const AuthDTO = {
     return {
       id: (user._id as import('mongoose').Types.ObjectId).toString(),
       email: user.email,
-      role: user.role,
       isActive: user.isActive,
     };
   },

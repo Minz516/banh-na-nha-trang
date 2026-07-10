@@ -10,12 +10,12 @@ import {
 } from '@repo/shared-types';
 
 export const OrderController = {
-  // POST /orders — guest or authenticated user places an order
+  // POST /orders — guest places an order, no account involved
   placeOrder: [
     validateRequest(placeOrderBodySchema),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const order = await OrderService.placeOrder(req.body, req.user?.id);
+        const order = await OrderService.placeOrder(req.body);
         res.status(201).json({ success: true, data: order });
       } catch (err) {
         next(err);
@@ -28,7 +28,7 @@ export const OrderController = {
     validateRequest(posOrderBodySchema),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const order = await OrderService.posOrder(req.body, req.user!.id);
+        const order = await OrderService.posOrder(req.body);
         res.status(201).json({ success: true, data: order });
       } catch (err) {
         next(err);
@@ -48,18 +48,6 @@ export const OrderController = {
       }
     },
   ],
-
-  // GET /orders/me — authenticated user's order history
-  async myOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const page = Number(req.query.page) || 1;
-      const limit = Number(req.query.limit) || 10;
-      const result = await OrderService.getMyOrders(req.user!.id, page, limit);
-      res.json({ success: true, data: result });
-    } catch (err) {
-      next(err);
-    }
-  },
 
   // GET /admin/orders
   async listOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -87,7 +75,7 @@ export const OrderController = {
     validateRequest(updateOrderStatusBodySchema),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const order = await OrderService.updateOrderStatus(req.params.id, req.body, req.user!.id);
+        const order = await OrderService.updateOrderStatus(req.params.id, req.body, req.user!.userId);
         res.json({ success: true, data: order });
       } catch (err) {
         next(err);

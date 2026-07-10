@@ -1,32 +1,37 @@
+import Link from 'next/link';
+
 export function Footer() {
   return (
-    <footer className="bg-gray-900 text-gray-400 py-16 mt-auto">
-      <div className="container mx-auto px-6 max-w-7xl grid grid-cols-1 md:grid-cols-4 gap-12 text-sm leading-relaxed">
+    <footer className="bg-text-primary text-background/70 mt-auto">
+      <div className="container mx-auto px-4 sm:px-6 max-w-7xl py-12 md:py-16 grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-12">
         <div className="md:col-span-2">
-          <h2 className="text-2xl font-bold text-white mb-4">Bánh Tráng Nhà Na</h2>
-          <p className="max-w-md">
-            Lưu giữ và lan tỏa hương vị bản địa Nha Trang thông qua nghệ thuật chế biến bánh tráng thủ công.
+          <h2 className="font-display text-2xl text-background mb-4">Bánh Tráng Nhà Na</h2>
+          <p className="max-w-md text-sm leading-relaxed">
+            Lưu giữ và lan tỏa hương vị bản địa Nha Trang thông qua nghệ thuật chế biến bánh tráng thủ công —
+            làm mới mỗi ngày, không chất bảo quản.
           </p>
         </div>
         <div>
-          <h3 className="font-semibold text-white mb-4 text-base">Liên kết</h3>
-          <ul className="space-y-3">
-            <li><a href="/products" className="hover:text-orange-400 transition">Sản phẩm</a></li>
-            <li><a href="/blog" className="hover:text-orange-400 transition">Câu chuyện</a></li>
-            <li><a href="/about" className="hover:text-orange-400 transition">Về chúng tôi</a></li>
+          <h3 className="font-semibold text-background mb-4 text-sm">Khám phá</h3>
+          <ul className="space-y-3 text-sm">
+            <li><Link href="/products" className="hover:text-accent transition-colors">Sản phẩm</Link></li>
+            <li><Link href="/blog" className="hover:text-accent transition-colors">Câu chuyện</Link></li>
+            <li><Link href="/about" className="hover:text-accent transition-colors">Về chúng tôi</Link></li>
           </ul>
         </div>
         <div>
-          <h3 className="font-semibold text-white mb-4 text-base">Hỗ trợ</h3>
-          <ul className="space-y-3">
-            <li><a href="/faq" className="hover:text-orange-400 transition">FAQ</a></li>
-            <li><a href="/shipping" className="hover:text-orange-400 transition">Giao hàng</a></li>
-            <li><a href="/returns" className="hover:text-orange-400 transition">Đổi trả</a></li>
+          <h3 className="font-semibold text-background mb-4 text-sm">Hỗ trợ</h3>
+          <ul className="space-y-3 text-sm">
+            <li><Link href="/lien-he" className="hover:text-accent transition-colors">Liên hệ</Link></li>
+            <li><Link href="/order-lookup" className="hover:text-accent transition-colors">Tra cứu đơn hàng</Link></li>
+            <li><Link href="/cart" className="hover:text-accent transition-colors">Giỏ hàng</Link></li>
           </ul>
         </div>
       </div>
-      <div className="container mx-auto px-6 max-w-7xl mt-16 pt-8 border-t border-gray-800 text-center">
-        <p>&copy; {new Date().getFullYear()} Bánh Tráng Nhà Na. Đặc sản Nha Trang.</p>
+      <div className="border-t border-background/10">
+        <div className="container mx-auto px-4 sm:px-6 max-w-7xl py-6 text-center text-xs text-background/50">
+          &copy; {new Date().getFullYear()} Bánh Tráng Nhà Na. Đặc sản Nha Trang.
+        </div>
       </div>
     </footer>
   );

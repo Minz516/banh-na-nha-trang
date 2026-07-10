@@ -41,7 +41,6 @@ export const orderSchema = z.object({
   id: z.string(),
   orderNumber: z.string(),
   customerId: z.string(),
-  userId: z.string().optional().nullable(),
   channel: z.enum(['online', 'pos']),
   customerSnapshot: customerSnapshotSchema,
   items: z.array(orderItemSchema),
