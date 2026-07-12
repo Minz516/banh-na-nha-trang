@@ -23,7 +23,7 @@ export const CustomerController = {
 
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const customer = await CustomerService.getCustomerById(req.params.id!);
+      const customer = await CustomerService.getCustomerById(req.params.id as string);
       res.json({ success: true, message: 'OK', data: CustomerDTO.profileResponse(customer), meta: null });
     } catch (err) {
       next(err);

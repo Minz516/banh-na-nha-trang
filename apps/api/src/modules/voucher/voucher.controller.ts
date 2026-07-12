@@ -48,7 +48,7 @@ export const VoucherController = {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const body = updateVoucherBodySchema.parse(req.body);
-      const v = await VoucherService.update(req.params.id!, body as Parameters<typeof VoucherService.update>[1]);
+      const v = await VoucherService.update(req.params.id as string, body as Parameters<typeof VoucherService.update>[1]);
       res.json({ success: true, message: 'Cập nhật thành công', data: VoucherDTO.response(v), meta: null });
     } catch (err) {
       next(err);
@@ -57,7 +57,7 @@ export const VoucherController = {
 
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await VoucherService.delete(req.params.id!);
+      await VoucherService.delete(req.params.id as string);
       res.json({ success: true, message: 'Xóa thành công', data: null, meta: null });
     } catch (err) {
       next(err);

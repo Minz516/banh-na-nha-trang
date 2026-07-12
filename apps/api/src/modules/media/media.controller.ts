@@ -49,7 +49,7 @@ export const MediaController = {
    */
   async destroy(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const publicId = decodeURIComponent(req.params.publicId);
+      const publicId = decodeURIComponent(req.params.publicId as string);
       const result = await cloudinary.uploader.destroy(publicId);
 
       if (result.result !== 'ok' && result.result !== 'not found') {

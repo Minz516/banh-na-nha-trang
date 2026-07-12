@@ -23,7 +23,7 @@ export const BlogController = {
 
   async getCategoryBySlug(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const cat = await BlogService.getCategoryBySlug(req.params.slug);
+      const cat = await BlogService.getCategoryBySlug(req.params.slug as string);
       res.json({ success: true, data: cat });
     } catch (err) {
       next(err);
@@ -46,7 +46,7 @@ export const BlogController = {
     validateRequest(updatePostCategoryBodySchema),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const cat = await BlogService.updateCategory(req.params.id, req.body);
+        const cat = await BlogService.updateCategory(req.params.id as string, req.body);
         res.json({ success: true, data: cat });
       } catch (err) {
         next(err);
@@ -56,7 +56,7 @@ export const BlogController = {
 
   async deleteCategory(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await BlogService.deleteCategory(req.params.id);
+      await BlogService.deleteCategory(req.params.id as string);
       res.json({ success: true, data: null });
     } catch (err) {
       next(err);
@@ -87,7 +87,7 @@ export const BlogController = {
 
   async getPostBySlug(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const post = await BlogService.getPostBySlug(req.params.slug);
+      const post = await BlogService.getPostBySlug(req.params.slug as string);
       res.json({ success: true, data: post });
     } catch (err) {
       next(err);
@@ -96,7 +96,7 @@ export const BlogController = {
 
   async getPostById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const post = await BlogService.getPostById(req.params.id);
+      const post = await BlogService.getPostById(req.params.id as string);
       res.json({ success: true, data: post });
     } catch (err) {
       next(err);
@@ -119,7 +119,7 @@ export const BlogController = {
     validateRequest(updatePostBodySchema),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const post = await BlogService.updatePost(req.params.id, req.body);
+        const post = await BlogService.updatePost(req.params.id as string, req.body);
         res.json({ success: true, data: post });
       } catch (err) {
         next(err);
@@ -129,7 +129,7 @@ export const BlogController = {
 
   async deletePost(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await BlogService.deletePost(req.params.id);
+      await BlogService.deletePost(req.params.id as string);
       res.json({ success: true, data: null });
     } catch (err) {
       next(err);

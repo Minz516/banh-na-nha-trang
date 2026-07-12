@@ -63,7 +63,7 @@ export const OrderController = {
   // GET /admin/orders/:id
   async getOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const order = await OrderService.getOrderById(req.params.id);
+      const order = await OrderService.getOrderById(req.params.id as string);
       res.json({ success: true, data: order });
     } catch (err) {
       next(err);
@@ -75,7 +75,7 @@ export const OrderController = {
     validateRequest(updateOrderStatusBodySchema),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const order = await OrderService.updateOrderStatus(req.params.id, req.body, req.user!.userId);
+        const order = await OrderService.updateOrderStatus(req.params.id as string, req.body, req.user!.userId);
         res.json({ success: true, data: order });
       } catch (err) {
         next(err);
@@ -86,7 +86,7 @@ export const OrderController = {
   // POST /admin/orders/:id/print
   async printOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const order = await OrderService.printOrder(req.params.id);
+      const order = await OrderService.printOrder(req.params.id as string);
       res.json({ success: true, data: order });
     } catch (err) {
       next(err);
