@@ -155,8 +155,11 @@ export const OrderService = {
     if (!order) throw new AppError(404, 'Không tìm thấy đơn hàng');
 
     const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+      // 'completed' is reachable directly from 'confirmed' — the admin UI's
+      // simplified 4-status flow (pending/confirmed/cancelled/total) skips the
+      // 'shipping' stage entirely, it's not surfaced as its own view anywhere.
       pending: ['confirmed', 'cancelled'],
-      confirmed: ['shipping', 'cancelled'],
+      confirmed: ['shipping', 'completed', 'cancelled'],
       shipping: ['completed', 'cancelled'],
       completed: [],
       cancelled: [],

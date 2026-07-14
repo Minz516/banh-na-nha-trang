@@ -26,7 +26,7 @@ const customerSchema = new Schema<ICustomer>(
     totalSpent: { type: Number, default: 0 },
     notes: { type: String },
   },
-  baseSchemaOptions
+  baseSchemaOptions<ICustomer>()
 );
 
 export const CustomerModel = mongoose.model<ICustomer>('Customer', customerSchema);

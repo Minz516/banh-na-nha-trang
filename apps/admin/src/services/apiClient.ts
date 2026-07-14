@@ -1,16 +1,19 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: API_BASE_URL,
   withCredentials: true, // Send cookies (JWT token) with requests
 });
 
 // Interceptor for responses
 apiClient.interceptors.response.use(
   (response) => {
-    // We unwrap Express JS standard { success: true, data: T } 
-    return response.data?.data ?? response.data;
+    // Return the full { success, data, meta } envelope — callers need `meta`
+    // (e.g. `meta.total`) for list/pagination views, not just `data`.
+    return response.data;
   },
   (error) => {
     // If backend returns 401 Unauthorized, the session is no longer valid server-side —

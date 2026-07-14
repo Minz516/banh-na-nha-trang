@@ -56,7 +56,7 @@ const productSchema = new Schema<IProduct>(
     metaTitle: { type: String },
     metaDescription: { type: String },
   },
-  baseSchemaOptions
+  baseSchemaOptions<IProduct>()
 );
 
 // Compound indexes per SRS §3.4
@@ -98,7 +98,7 @@ const categorySchema = new Schema<ICategory>(
     sortOrder: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
   },
-  baseSchemaOptions
+  baseSchemaOptions<ICategory>()
 );
 
 categorySchema.pre('save', function (next) {

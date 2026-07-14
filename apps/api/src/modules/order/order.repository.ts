@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { OrderModel, type IOrder, type OrderStatus } from './order.model.js';
 import { OrderCounterModel } from './orderCounter.model.js';
 import type { OrderQuery } from '@repo/shared-types';
@@ -44,6 +45,7 @@ export const OrderRepository = {
   async query(q: OrderQuery) {
     const filter: Record<string, unknown> = {};
     if (q.status) filter.status = q.status;
+    if (q.customerId && mongoose.isValidObjectId(q.customerId)) filter.customerId = q.customerId;
     if (q.from || q.to) {
       filter.createdAt = {};
       if (q.from) (filter.createdAt as Record<string, unknown>).$gte = new Date(q.from);
@@ -51,7 +53,7 @@ export const OrderRepository = {
     }
     const skip = (q.page - 1) * q.limit;
     const [items, total] = await Promise.all([
-      OrderModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean({ virtuals: true }),
+      OrderModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit),
       OrderModel.countDocuments(filter),
     ]);
     return { items, total, page: q.page, limit: q.limit, totalPages: Math.ceil(total / q.limit) };

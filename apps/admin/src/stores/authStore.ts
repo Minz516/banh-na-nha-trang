@@ -29,16 +29,16 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   checkSession: async () => {
     try {
-      const user = (await apiClient.get('/auth/me')) as unknown as AuthUser;
-      set({ status: 'authenticated', user });
+      const res = (await apiClient.get('/auth/me')) as unknown as { data: AuthUser };
+      set({ status: 'authenticated', user: res.data });
     } catch {
       set({ status: 'unauthenticated', user: null });
     }
   },
 
   login: async (email, password) => {
-    const user = (await apiClient.post('/auth/login', { email, password })) as unknown as AuthUser;
-    set({ status: 'authenticated', user });
+    const res = (await apiClient.post('/auth/login', { email, password })) as unknown as { data: AuthUser };
+    set({ status: 'authenticated', user: res.data });
   },
 
   logout: async () => {

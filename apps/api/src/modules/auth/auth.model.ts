@@ -23,7 +23,7 @@ const userSchema = new Schema<IUser>(
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date },
   },
-  baseSchemaOptions
+  baseSchemaOptions<IUser>()
 );
 
 // Hash password before save

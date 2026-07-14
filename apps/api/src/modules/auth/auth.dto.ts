@@ -3,7 +3,7 @@ import type { IUser } from './auth.model.js';
 export const AuthDTO = {
   userResponse(user: IUser) {
     return {
-      id: (user._id as import('mongoose').Types.ObjectId).toString(),
+      id: user._id.toString(),
       email: user.email,
       isActive: user.isActive,
     };

@@ -53,8 +53,12 @@ export const OrderController = {
   async listOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const q = orderQuerySchema.parse(req.query);
-      const result = await OrderService.queryOrders(q);
-      res.json({ success: true, data: result });
+      const { items, total, page, limit, totalPages } = await OrderService.queryOrders(q);
+      res.json({
+        success: true,
+        data: items,
+        meta: { total, page, limit, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 },
+      });
     } catch (err) {
       next(err);
     }

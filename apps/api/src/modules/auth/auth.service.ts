@@ -12,7 +12,7 @@ export const AuthService = {
     const valid = await AuthRepository.verifyPassword(body.password, user.passwordHash);
     if (!valid) throw new AppError(401, 'Email hoặc mật khẩu không đúng');
 
-    await AuthRepository.updateLastLogin((user._id as import('mongoose').Types.ObjectId).toString());
+    await AuthRepository.updateLastLogin(user._id.toString());
     return user;
   },
 

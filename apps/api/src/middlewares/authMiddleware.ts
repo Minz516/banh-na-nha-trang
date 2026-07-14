@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/token.util.js';
+import { AuthInterfaces } from '../modules/auth/auth.interfaces.js';
 import type { JwtPayload } from '@repo/shared-types';
 
 // Augment Express Request to carry the decoded JWT payload
@@ -12,10 +13,15 @@ declare global {
 }
 
 /**
- * verifyToken — requires a valid access_token cookie.
- * Returns 401 if missing or invalid.
+ * verifyToken — requires a valid access_token cookie AND an admin/staff account
+ * that is still active. Admin routes/endpoints are guarded by this middleware;
+ * every User in the system is staff, there is no separate customer login.
+ *
+ * Re-checking the account on every request (not just the JWT signature/expiry)
+ * means deactivating a User revokes access immediately, instead of waiting up
+ * to 15 minutes for their existing access_token to expire.
  */
-export function verifyToken(req: Request, res: Response, next: NextFunction): void {
+export async function verifyToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = req.cookies?.access_token as string | undefined;
 
   if (!token) {
@@ -27,7 +33,18 @@ export function verifyToken(req: Request, res: Response, next: NextFunction): vo
   }
 
   try {
-    req.user = verifyAccessToken(token);
+    const payload = verifyAccessToken(token);
+    const user = await AuthInterfaces.getUserById(payload.userId);
+
+    if (!user || !user.isActive) {
+      res.status(403).json({
+        success: false,
+        error: { statusCode: 403, message: 'Tài khoản không có quyền truy cập', cause: null },
+      });
+      return;
+    }
+
+    req.user = payload;
     next();
   } catch (err) {
     const isExpired = (err as Error).name === 'TokenExpiredError';

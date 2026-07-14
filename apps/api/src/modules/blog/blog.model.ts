@@ -22,7 +22,7 @@ const postCategorySchema = new Schema<IPostCategory>(
     sortOrder: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
   },
-  baseSchemaOptions
+  baseSchemaOptions<IPostCategory>()
 );
 
 postCategorySchema.pre('save', function (next) {
@@ -88,7 +88,7 @@ const postSchema = new Schema<IPost>(
     readingMinutes: { type: Number, default: 0 },
     viewCount: { type: Number, default: 0 },
   },
-  baseSchemaOptions
+  baseSchemaOptions<IPost>()
 );
 
 postSchema.index({ status: 1, publishedAt: -1 });

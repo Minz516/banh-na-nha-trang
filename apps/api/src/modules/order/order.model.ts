@@ -131,7 +131,7 @@ const orderSchema = new Schema<IOrder>(
     paymentMethod: { type: String, enum: ['cod', 'bank_transfer'], required: true },
     printCount: { type: Number, default: 0 },
   },
-  baseSchemaOptions
+  baseSchemaOptions<IOrder>()
 );
 
 orderSchema.index({ customerId: 1, createdAt: -1 });

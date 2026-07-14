@@ -10,16 +10,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
+    "declaration": false,
+    "declarationMap": false,
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "paths": {
-      "@repo/shared-types": ["../../packages/shared-types/src/index.ts"]
-    }
+    "noUnusedParameters": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

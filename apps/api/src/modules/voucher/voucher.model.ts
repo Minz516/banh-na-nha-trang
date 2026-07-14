@@ -38,7 +38,7 @@ const voucherSchema = new Schema<IVoucher>(
     validUntil: { type: Date },
     isActive: { type: Boolean, default: true },
   },
-  baseSchemaOptions
+  baseSchemaOptions<IVoucher>()
 );
 
 export const VoucherModel = mongoose.model<IVoucher>('Voucher', voucherSchema);
