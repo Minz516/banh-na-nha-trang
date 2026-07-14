@@ -37,7 +37,7 @@ export const apiClient = {
 async function fetchBase<T>(path: string, init: RequestInit): Promise<T> {
   const url = `${getBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
   
-  const res = await fetch(url, init);
+  const res = await fetch(url, { credentials: 'include', ...init });
   const data = await res.json().catch(() => null);
   
   if (!res.ok) {

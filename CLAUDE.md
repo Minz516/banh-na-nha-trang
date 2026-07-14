@@ -30,7 +30,13 @@ Copy `.env.example` to `.env` in each app before running dev servers — it docu
 
 ## Architecture
 
-Full rationale lives in `ARCHITECTURE_BLUEPRINT_GREENFIELD.md` (why each tech choice was made) and the requirement docs in `docs/system/SRS.md` (source of truth for business rules) and `docs/server/API_CONTRACT.md`. Where the two disagree, **SRS.md wins** — notably: order status is `pending` (not `pending_confirmation`), products are flat with no variants (one price/stock/optional `flavor` per product — two flavors are two separate products, so carts/orders carry `productId` + `quantity` only, never a `variantId`), all admin routes live under `/api/v1/admin/*` behind one guard middleware, and stock decrements atomically at order placement / restores on cancellation.
+Full rationale lives in `ARCHITECTURE_BLUEPRINT_GREENFIELD.md` (why each tech choice was made) and the requirement docs in `docs/system/SRS.md` (source of truth for business rules) and `docs/server/API_CONTRACT.md`. Where the two disagree, **SRS.md wins** — notably: order status is `pending` (not `pending_confirmation`), products are flat with no variants (one price/stock/optional `flavor` per product — two flavors are two separate products, so carts/orders carry `productId` + `quantity` only, never a `variantId`), and stock decrements atomically at order placement / restores on cancellation.
+
+**Docs describe the target design; the running code is behind it in a few specific ways — check before assuming a doc'd piece exists:**
+- Routes are mounted at `/api/*` in `apps/api/src/app.ts`, not `/api/v1/*` as SRS/blueprint specify. There is no single `/api/v1/admin/*` guard — "admin" endpoints are just `verifyToken`-gated routes scattered per module (e.g. `POST /api/products`, `GET /api/blog/admin/all`). There's no separate role check: any authenticated user is staff (see the comment in `catalog.routes.ts`), so there's no `roleMiddleware.ts`.
+- There is no `cart` API module (no `/api/cart/*` routes), even though `packages/shared-types/src/cart.schema.ts` exists. Cart state currently lives client-side only, in the storefront's `stores/cartStore.ts`.
+- The storefront has no auth-gated surface at all right now (no `middleware.ts`, no `(auth)` route group, no account pages) — customer auth was intentionally ripped out (see git log) and the storefront currently runs off `lib/data/mock-catalog.ts` mock data while the UI shell is built out. Don't assume `/login`, `/account/*`, or `/checkout/success` exist without checking.
+- The admin app (`apps/admin/src`) has a real login flow and router (`App.tsx`), but every route body (`/products`, `/orders`, `/vouchers`, `/blog`) is currently a placeholder — no CRUD UI built yet.
 
 ### Workspace layout
 
@@ -48,14 +54,14 @@ packages/
 
 ### API module structure (`apps/api/src/modules/*`)
 
-Each domain module (`auth`, `customer`, `catalog`, `cart`, `order`, `voucher`, `blog`, `media`) follows the same file split: `*.routes.ts` → `*.controller.ts` → `*.service.ts` → `*.repository.ts` → `*.model.ts` (Mongoose schema), plus `*.dto.ts` (Zod validation) and `*.interfaces.ts` (the module's public API for cross-module calls — e.g. `catalog.interfaces.ts` exposes `getProductById`, `decrementStock`). Modules don't import each other's repositories/models directly; cross-module reads/writes go through `*.interfaces.ts`, and side effects fan out via `utils/eventBus.ts` (e.g. `ORDER_PLACED` → customer stats update, `ORDER_CANCELLED` → stock/voucher/customer rollback). Auth uses JWT in httpOnly cookies (`access_token` 15min, `refresh_token` 7d) — never Bearer tokens; `optionalVerifyToken` middleware allows guest checkout.
+Each domain module (`auth`, `customer`, `catalog`, `order`, `voucher`, `blog`, `media` — no `cart` module, see gaps above) follows the same file split: `*.routes.ts` → `*.controller.ts` → `*.service.ts` → `*.repository.ts` → `*.model.ts` (Mongoose schema), plus `*.dto.ts` (Zod validation) and `*.interfaces.ts` (the module's public API for cross-module calls — e.g. `catalog.interfaces.ts` exposes `getProductById`, `decrementStock`). Modules don't import each other's repositories/models directly; cross-module reads/writes go through `*.interfaces.ts`, and side effects fan out via `utils/eventBus.ts` (e.g. `ORDER_PLACED` → customer stats update, `ORDER_CANCELLED` → stock/voucher/customer rollback). Auth uses JWT in httpOnly cookies (`access_token` 15min, `refresh_token` 7d) — never Bearer tokens; `optionalVerifyToken` middleware allows guest checkout.
 
 ### Storefront rendering strategy (`apps/storefront`)
 
 This is the one area that requires the most care — see `ARCHITECTURE_BLUEPRINT_GREENFIELD.md` §2.1–2.2 for the full route table. The core rule: **public, cacheable reads and cookie-bearing reads must never share a Server Component.**
 
 - Public catalog/blog data goes through `lib/api/server-public.ts` (ISR-eligible, no cookies) — used by SSG/ISR routes like `/products/[slug]`, `/blog/[slug]`, `/`.
-- Cookie-bearing data (account, cart mutations) goes through `lib/api/server-authenticated.ts` server-side, or `lib/api/client.ts` (fetch-based, `credentials: 'include'`, not Axios) from Client Components — never cached.
+- Cookie-bearing data (account, cart mutations) is meant to go through a server-side `lib/api/server-authenticated.ts` (not yet created — only `server-public.ts` exists there today), or `lib/api/client.ts` (fetch-based, `credentials: 'include'`, not Axios) from Client Components — never cached.
 - `middleware.ts` runs on the Edge Runtime and verifies JWTs with `jose` (not `jsonwebtoken`, since Node's `crypto` isn't available at the edge).
 - Route groups `(shop)` (cart/checkout/order-lookup) and `(auth)` (login/register) are `noindex,nofollow` + CSR; everything else (home, products, collections, blog) is indexed and server-rendered (ISR with per-route revalidate windows).
 - Markdown blog content is converted to sanitized HTML server-side in `blog.service.ts` (remark/rehype pipeline) — never parsed client-side.

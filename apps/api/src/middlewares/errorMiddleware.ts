@@ -35,6 +35,15 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
     return;
   }
 
+  // Mongoose bad ObjectId (e.g. a stale/mock id sent from the client)
+  if (err instanceof mongoose.Error.CastError) {
+    res.status(400).json({
+      success: false,
+      error: { statusCode: 400, message: `ID không hợp lệ: "${err.value}"`, cause: null },
+    });
+    return;
+  }
+
   // Mongoose validation error
   if (err instanceof mongoose.Error.ValidationError) {
     res.status(400).json({

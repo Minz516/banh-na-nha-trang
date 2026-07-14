@@ -13,7 +13,10 @@ type OrderResponse = { orderNumber: string };
 type FormState = {
   fullName: string;
   phone: string;
-  address: string;
+  houseNumber: string;
+  street: string;
+  ward: string;
+  city: string;
   email: string;
   paymentMethod: 'cod' | 'bank_transfer';
   note: string;
@@ -22,7 +25,10 @@ type FormState = {
 const INITIAL_FORM: FormState = {
   fullName: '',
   phone: '',
-  address: '',
+  houseNumber: '',
+  street: '',
+  ward: '',
+  city: '',
   email: '',
   paymentMethod: 'cod',
   note: '',
@@ -59,6 +65,11 @@ export default function CheckoutPage() {
 
     if (items.length === 0) return;
 
+    const address = [form.houseNumber, form.street, form.ward, form.city]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(', ');
+
     setSubmitting(true);
     try {
       const result = await apiClient.post<OrderResponse>('/orders', {
@@ -67,7 +78,7 @@ export default function CheckoutPage() {
         customerInfo: {
           fullName: form.fullName,
           phone: form.phone,
-          address: form.address,
+          address,
           ...(form.email ? { email: form.email } : {}),
         },
         ...(form.note ? { note: form.note } : {}),
@@ -185,14 +196,48 @@ export default function CheckoutPage() {
 
               <div className="mt-4">
                 <label className="block text-sm font-medium text-text-secondary mb-1">Địa chỉ giao hàng</label>
-                <input
-                  type="text"
-                  required
-                  value={form.address}
-                  onChange={(e) => updateField('address', e.target.value)}
-                  className="w-full h-11 px-4 rounded-sm border border-border bg-surface outline-none focus:ring-2 focus:ring-focus-ring"
-                  placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      value={form.houseNumber}
+                      onChange={(e) => updateField('houseNumber', e.target.value)}
+                      className="w-full h-11 px-4 rounded-sm border border-border bg-surface outline-none focus:ring-2 focus:ring-focus-ring"
+                      placeholder="Số nhà"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      value={form.street}
+                      onChange={(e) => updateField('street', e.target.value)}
+                      className="w-full h-11 px-4 rounded-sm border border-border bg-surface outline-none focus:ring-2 focus:ring-focus-ring"
+                      placeholder="Tên đường"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      value={form.ward}
+                      onChange={(e) => updateField('ward', e.target.value)}
+                      className="w-full h-11 px-4 rounded-sm border border-border bg-surface outline-none focus:ring-2 focus:ring-focus-ring"
+                      placeholder="Phường/Xã"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      value={form.city}
+                      onChange={(e) => updateField('city', e.target.value)}
+                      className="w-full h-11 px-4 rounded-sm border border-border bg-surface outline-none focus:ring-2 focus:ring-focus-ring"
+                      placeholder="Tỉnh/Thành phố"
+                    />
+                  </div>
+                </div>
                 {errors.address && <p className="text-sm text-danger mt-1">{errors.address}</p>}
               </div>
 

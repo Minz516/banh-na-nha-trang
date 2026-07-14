@@ -1,18 +1,26 @@
 import { OrderModel, type IOrder, type OrderStatus } from './order.model.js';
+import { OrderCounterModel } from './orderCounter.model.js';
 import type { OrderQuery } from '@repo/shared-types';
 
-/** Generate a sequential-looking human-friendly order number */
-function generateOrderNumber(): string {
-  const ts = Date.now().toString(36).toUpperCase();
-  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `BTN-${ts}-${rand}`;
+/** BTNN-YYYYMMDD-NNN, atomically sequential per day (API_CONTRACT.md, SRS.md §3.6) */
+async function generateOrderNumber(): Promise<string> {
+  const now = new Date();
+  const dateKey = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+
+  const counter = await OrderCounterModel.findByIdAndUpdate(
+    dateKey,
+    { $inc: { seq: 1 } },
+    { upsert: true, new: true }
+  );
+
+  return `BTNN-${dateKey}-${String(counter.seq).padStart(3, '0')}`;
 }
 
 export const OrderRepository = {
   async create(data: Partial<IOrder>): Promise<IOrder> {
     const order = new OrderModel({
       ...data,
-      orderNumber: generateOrderNumber(),
+      orderNumber: await generateOrderNumber(),
       statusHistory: [{ status: data.status ?? 'pending', changedAt: new Date() }],
     });
     return order.save();

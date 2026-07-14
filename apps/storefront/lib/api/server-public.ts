@@ -8,9 +8,8 @@ import type {
   ProductMap
 } from '@repo/shared-types';
 
-// TEMPORARY: serves hardcoded products/categories for frontend testing until
-// the catalog is seeded in the database. Flip to false to hit the real API.
-const USE_MOCK_CATALOG = true;
+// The catalog is now seeded in the database (pnpm seed:catalog) — hit the real API.
+const USE_MOCK_CATALOG = false;
 
 /**
  * Server Component fetch utilities (Public Data).

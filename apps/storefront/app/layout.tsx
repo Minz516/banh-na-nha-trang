@@ -3,6 +3,7 @@ import { Newsreader, Public_Sans } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { ContactWidget } from '@/components/ContactWidget';
 
 // Section 4.1 — Newsreader (display/heading) + Public Sans (body/UI). Both subsets
 // include Vietnamese: diacritics must render cleanly at every weight (non-negotiable, 4.1).
@@ -40,6 +41,7 @@ export default function RootLayout({
           {children}
         </main>
         <Footer />
+        <ContactWidget />
       </body>
     </html>
   );

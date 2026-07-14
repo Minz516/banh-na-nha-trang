@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { configureCloudinary } from './config/cloudinary.config.js';
 import { errorMiddleware } from './middlewares/errorMiddleware.js';
+import { debugLogMiddleware } from './middlewares/debugLogMiddleware.js';
 
 // Module routes
 import authRoutes from './modules/auth/auth.routes.js';
@@ -54,6 +55,9 @@ export function createApp(): express.Application {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
+
+  // ── Debug logging (every request) ────────────────────────────────────────────
+  app.use(debugLogMiddleware);
 
   // ── Health check ──────────────────────────────────────────────────────────────
   app.get('/health', (_req: express.Request, res: express.Response) => {

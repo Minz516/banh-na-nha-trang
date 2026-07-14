@@ -8,12 +8,12 @@ const nextConfig: NextConfig = {
     ],
   },
   async rewrites() {
+    // API_URL already includes the /api suffix (see lib/env.ts) — do not append it again.
+    const apiBase = process.env.API_URL || 'http://localhost:5000/api';
     return [
       {
         source: '/api/:path*',
-        destination: process.env.API_URL
-          ? `${process.env.API_URL}/api/:path*`
-          : 'http://localhost:5000/api/:path*',
+        destination: `${apiBase}/:path*`,
       },
     ];
   },

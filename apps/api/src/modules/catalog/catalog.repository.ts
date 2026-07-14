@@ -10,6 +10,7 @@ export const CatalogRepository = {
   },
 
   async findProductById(id: string): Promise<IProduct | null> {
+    if (!mongoose.isValidObjectId(id)) return null;
     return ProductModel.findById(id);
   },
 
@@ -105,6 +106,8 @@ export const CatalogRepository = {
   },
 
   async getProductsByIds(ids: string[]): Promise<IProduct[]> {
-    return ProductModel.find({ _id: { $in: ids }, isActive: true });
+    const validIds = ids.filter((id) => mongoose.isValidObjectId(id));
+    if (validIds.length === 0) return [];
+    return ProductModel.find({ _id: { $in: validIds }, isActive: true });
   },
 };

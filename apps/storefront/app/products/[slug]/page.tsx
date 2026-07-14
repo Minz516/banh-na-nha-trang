@@ -1,6 +1,7 @@
 import { CatalogAPI } from '@/lib/api/server-public';
 import { generateSeoMetadata } from '@/lib/seo/metadata';
 import { notFound } from 'next/navigation';
+import { ProductDetailAddToCart } from '@/components/ProductDetailAddToCart';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -45,9 +46,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             </div>
 
             <div className="flex gap-4">
-              <button className="flex-1 bg-gray-900 text-white h-14 rounded-full font-bold hover:bg-orange-500 transition-colors text-lg">
-                Thêm vào giỏ hàng
-              </button>
+              <ProductDetailAddToCart
+                productId={product.id}
+                name={product.name}
+                price={product.promoPrice ?? product.basePrice}
+                image={product.images[0]?.url}
+              />
             </div>
 
             <div className="mt-12 bg-gray-50 rounded-2xl p-8">

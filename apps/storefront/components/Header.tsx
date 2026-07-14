@@ -12,7 +12,6 @@ const NAV_LINKS = [
   { href: '/products', label: 'Sản phẩm' },
   { href: '/blog', label: 'Câu chuyện' },
   { href: '/about', label: 'Về chúng tôi' },
-  { href: '/lien-he', label: 'Liên hệ' },
 ];
 
 export async function Header() {
