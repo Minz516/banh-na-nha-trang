@@ -72,3 +72,13 @@ This is the one area that requires the most care — see `ARCHITECTURE_BLUEPRINT
 `docs/client/DESIGN.MD` is the authoritative design system ("Bánh Tráng Nhà Na — Design System") for every UI surface, human- or AI-generated. It governs color, type, spacing, layout, motion, and component behavior in detail (26 sections) and takes priority over any component library or styling tool if they conflict. Read it before making visual/UI decisions in the storefront or admin panel — key entry points: §18/§24 for tokens and Tailwind mapping, §16 for layout composition, §26 for how components combine, §9 for explicitly rejected patterns (no glassmorphism/neon/heavy gradients — this is a food brand, not a tech brand).
 
 The storefront also has its own `CLAUDE.md` (imports `AGENTS.md`) noting that its Next.js version may differ from training data — check `node_modules/next/dist/docs/` for API/convention changes before writing Next.js code there.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
