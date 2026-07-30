@@ -102,3 +102,21 @@ body {
   font-family: var(--font-sans);
   margin: 0;
 }
+
+/* POS bill printing — isolates #pos-print-area as the only thing sent to the
+   printer, since the bill lives inside the normal app chrome (sidebar, modal
+   scrim) the rest of the page must stay hidden rather than removed from the DOM. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #pos-print-area,
+  #pos-print-area * {
+    visibility: visible;
+  }
+  #pos-print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+}

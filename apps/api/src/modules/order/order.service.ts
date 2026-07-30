@@ -121,7 +121,7 @@ export const OrderService = {
    * D7: POS mode — admin places an order at the counter; the customer is never authenticated.
    */
   async posOrder(body: PosOrderBody): Promise<IOrder> {
-    // Reuse placeOrder logic with pos channel override
+    // Reuse placeOrder logic, then tag the record as a counter sale.
     const order = await OrderService.placeOrder({
       ...(body as PlaceOrderBody),
       customerInfo: {
@@ -130,8 +130,7 @@ export const OrderService = {
       },
     });
 
-    // Patch channel to 'pos'
-    return OrderRepository.updateStatus(order._id.toString(), order.status, {}) as Promise<IOrder>;
+    return (await OrderRepository.setChannel(order._id.toString(), 'pos')) ?? order;
   },
 
   async getOrderById(id: string): Promise<IOrder> {

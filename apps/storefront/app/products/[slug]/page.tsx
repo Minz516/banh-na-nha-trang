@@ -2,6 +2,7 @@ import { CatalogAPI } from '@/lib/api/server-public';
 import { generateSeoMetadata } from '@/lib/seo/metadata';
 import { notFound } from 'next/navigation';
 import { ProductDetailAddToCart } from '@/components/ProductDetailAddToCart';
+import { ProductImageGallery } from '@/components/ProductImageGallery';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -23,9 +24,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <div className="container mx-auto px-6 max-w-7xl">
         <div className="flex flex-col lg:flex-row gap-16">
           <div className="w-full lg:w-1/2">
-            <div className="aspect-[4/5] bg-gray-100 rounded-3xl overflow-hidden relative">
-              <img src={product.images[0]?.url || 'https://picsum.photos/800/1000'} alt={product.name} className="w-full h-full object-cover" />
-            </div>
+            <ProductImageGallery images={product.images} name={product.name} />
           </div>
           <div className="w-full lg:w-1/2 lg:py-12">
             <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight">{product.name}</h1>

@@ -1,15 +1,11 @@
 import { env } from '../env';
 import { ApiError } from './errors';
-import { mockCategories, mockProducts } from '../data/mock-catalog';
 import type {
   Product,
   Category,
-  BlogPostMap,
-  ProductMap
+  Post,
+  PostCategory
 } from '@repo/shared-types';
-
-// The catalog is now seeded in the database (pnpm seed:catalog) — hit the real API.
-const USE_MOCK_CATALOG = false;
 
 /**
  * Server Component fetch utilities (Public Data).
@@ -42,52 +38,49 @@ async function serverFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const CatalogAPI = {
   async getCategories() {
-    if (USE_MOCK_CATALOG) return mockCategories;
     return serverFetch<Category[]>('/categories');
   },
   async getCategoryBySlug(slug: string) {
-    if (USE_MOCK_CATALOG) {
-      const category = mockCategories.find((c) => c.slug === slug);
-      if (!category) throw new ApiError(404, 'Không tìm thấy danh mục');
-      return category;
-    }
     return serverFetch<Category>(`/categories/${slug}`);
   },
   async getProducts() {
-    if (USE_MOCK_CATALOG) return mockProducts;
     return serverFetch<Product[]>('/products');
   },
   async getProductBySlug(slug: string) {
-    if (USE_MOCK_CATALOG) {
-      const product = mockProducts.find((p) => p.slug === slug);
-      if (!product) throw new ApiError(404, 'Không tìm thấy sản phẩm');
-      return product;
-    }
     return serverFetch<Product>(`/products/${slug}`);
   },
   async getFeaturedProducts() {
-    const products = USE_MOCK_CATALOG ? mockProducts : await serverFetch<Product[]>('/products');
+    const products = await serverFetch<Product[]>('/products');
     return products.filter(p => p.isFeatured).slice(0, 8);
   },
   async getNewArrivals() {
-    const products = USE_MOCK_CATALOG ? mockProducts : await serverFetch<Product[]>('/products');
+    const products = await serverFetch<Product[]>('/products');
     return products.filter(p => p.isNewArrival).slice(0, 8);
   },
   async getProductsByCategorySlug(categorySlug: string) {
-    const products = USE_MOCK_CATALOG ? mockProducts : await serverFetch<Product[]>('/products');
+    const products = await serverFetch<Product[]>('/products');
     const category = await CatalogAPI.getCategoryBySlug(categorySlug);
     return products.filter(p => p.categoryId === category.id);
   }
 };
 
+type PostListResult = { items: Post[]; total: number; page: number; limit: number; totalPages: number };
+
 export const BlogAPI = {
-  async getPosts() {
-    return serverFetch<BlogPostMap['ListResponse']>('/blog/posts');
+  async getPosts(params?: { category?: string; search?: string; page?: number; limit?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.category) qs.set('category', params.category);
+    if (params?.search) qs.set('search', params.search);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const query = qs.toString();
+    const result = await serverFetch<PostListResult>(`/blog${query ? `?${query}` : ''}`);
+    return { posts: result.items, total: result.total, totalPages: result.totalPages };
   },
   async getPostBySlug(slug: string) {
-    return serverFetch<BlogPostMap['ItemResponse']>(`/blog/posts/${slug}`);
+    return serverFetch<Post>(`/blog/${slug}`);
   },
   async getCategories() {
-    return serverFetch<BlogPostMap['CategoryListResponse']>('/blog/categories');
+    return serverFetch<PostCategory[]>('/blog/categories');
   }
 };

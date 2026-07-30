@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Search, Download, RefreshCw, ArrowLeft, FileText } from 'lucide-react';
 import { apiClient, API_BASE_URL } from '../services/apiClient';
 import { PageHeader } from '../components/PageHeader';
-import { STATUS_LABELS, STATUS_TONES, currency, dateFormat, dateTimeFormat } from '../lib/orderFormat';
+import { STATUS_LABELS, STATUS_TONES, PAYMENT_LABELS, currency, dateFormat, dateTimeFormat } from '../lib/orderFormat';
 
 type CustomerRow = {
   id: string;
@@ -19,6 +19,28 @@ type CustomerOrderRow = {
   orderNumber: string;
   total: number;
   status: string;
+  createdAt: string;
+};
+
+type OrderItem = {
+  productSnapshot: { name: string; flavor: string | null };
+  unitPrice: number;
+  quantity: number;
+  subtotal: number;
+};
+
+type OrderDetailRow = {
+  id: string;
+  orderNumber: string;
+  customerSnapshot: { fullName: string; phone: string; address?: string; email?: string };
+  items: OrderItem[];
+  subtotal: number;
+  discountAmount: number;
+  voucherCode?: string;
+  total: number;
+  status: string;
+  paymentMethod: 'cod' | 'bank_transfer';
+  note?: string;
   createdAt: string;
 };
 
@@ -161,15 +183,13 @@ export function Customers() {
               )}
 
               {customers?.map((customer) => (
-                <tr key={customer.id} className="hover:bg-card-hover transition-colors">
+                <tr
+                  key={customer.id}
+                  onClick={() => setSelectedCustomer(customer)}
+                  className="hover:bg-card-hover transition-colors cursor-pointer"
+                >
                   <td className="px-5 py-3 truncate">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCustomer(customer)}
-                      className="font-medium text-primary hover:text-primary-hover hover:underline cursor-pointer text-left truncate"
-                    >
-                      {customer.fullName}
-                    </button>
+                    <span className="font-medium text-primary truncate">{customer.fullName}</span>
                   </td>
                   <td className="px-5 py-3 text-text-secondary whitespace-nowrap">{customer.phone}</td>
                   <td className="px-5 py-3 text-text-secondary truncate">{customer.email ?? '—'}</td>
@@ -193,6 +213,9 @@ export function Customers() {
 function CustomerDetail({ customer, onBack }: { customer: CustomerRow; onBack: () => void }) {
   const [orders, setOrders] = useState<CustomerOrderRow[] | null>(null);
   const [error, setError] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderDetailRow | null>(null);
+  const [orderDetailError, setOrderDetailError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,6 +238,27 @@ function CustomerDetail({ customer, onBack }: { customer: CustomerRow; onBack: (
       cancelled = true;
     };
   }, [customer.id]);
+
+  useEffect(() => {
+    if (!selectedOrderId) return;
+    let cancelled = false;
+    setSelectedOrder(null);
+    setOrderDetailError(false);
+
+    async function load() {
+      try {
+        const order = (await apiClient.get(`/orders/${selectedOrderId}`)) as OrderDetailRow;
+        if (!cancelled) setSelectedOrder(order);
+      } catch {
+        if (!cancelled) setOrderDetailError(true);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedOrderId]);
 
   return (
     <div>
@@ -296,7 +340,11 @@ function CustomerDetail({ customer, onBack }: { customer: CustomerRow; onBack: (
               )}
 
               {orders?.map((order) => (
-                <tr key={order.id}>
+                <tr
+                  key={order.id}
+                  onClick={() => setSelectedOrderId(order.id)}
+                  className="hover:bg-card-hover transition-colors cursor-pointer"
+                >
                   <td className="px-5 py-3 font-medium text-text-primary truncate">{order.orderNumber}</td>
                   <td className="px-5 py-3 text-text-secondary whitespace-nowrap">
                     {dateTimeFormat.format(new Date(order.createdAt))}
@@ -316,6 +364,129 @@ function CustomerDetail({ customer, onBack }: { customer: CustomerRow; onBack: (
             </tbody>
           </table>
         </div>
+      </div>
+
+      {selectedOrderId && (
+        <OrderDetailModal
+          order={selectedOrder}
+          error={orderDetailError}
+          onClose={() => setSelectedOrderId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function OrderDetailModal({
+  order,
+  error,
+  onClose,
+}: {
+  order: OrderDetailRow | null;
+  error: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[51] flex items-center justify-center p-4 bg-[rgba(43,29,20,0.4)]" onClick={onClose}>
+      <div
+        className="bg-card rounded-lg shadow-lg max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {error && (
+          <div className="py-8 text-center text-text-secondary text-sm">Không thể tải chi tiết đơn hàng.</div>
+        )}
+
+        {!error && !order && (
+          <div className="h-40 rounded-sm bg-[color:var(--color-skeleton-base)] animate-pulse" />
+        )}
+
+        {!error && order && (
+          <>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-3">
+                <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold text-text-primary">
+                  {order.orderNumber}
+                </h2>
+                <span
+                  className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_TONES[order.status] ?? ''}`}
+                >
+                  {STATUS_LABELS[order.status] ?? order.status}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-sm font-medium text-text-secondary hover:text-text-primary cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+            <p className="text-xs text-text-muted mb-4">{dateTimeFormat.format(new Date(order.createdAt))}</p>
+
+            <table className="w-full text-sm mb-4">
+              <thead>
+                <tr className="border-b border-divider text-left text-text-secondary">
+                  <th className="pb-2 font-medium">Sản phẩm</th>
+                  <th className="pb-2 font-medium text-right">Đơn giá</th>
+                  <th className="pb-2 font-medium text-right">Số lượng</th>
+                  <th className="pb-2 font-medium text-right">Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-divider">
+                {order.items.map((item, i) => (
+                  <tr key={i}>
+                    <td className="py-3 text-text-primary">
+                      {item.productSnapshot.name}
+                      {item.productSnapshot.flavor && (
+                        <span className="text-text-muted"> — {item.productSnapshot.flavor}</span>
+                      )}
+                    </td>
+                    <td className="py-3 text-right text-text-secondary">{currency.format(item.unitPrice)}</td>
+                    <td className="py-3 text-right text-text-secondary">{item.quantity}</td>
+                    <td className="py-3 text-right font-medium text-text-primary">{currency.format(item.subtotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="border-t border-divider pt-4 space-y-2 text-sm mb-4">
+              <div className="flex justify-between text-text-secondary">
+                <span>Tạm tính</span>
+                <span>{currency.format(order.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-text-secondary">
+                <span>Voucher</span>
+                <span>{order.voucherCode ? `${order.voucherCode} (-${currency.format(order.discountAmount)})` : 'Không sử dụng'}</span>
+              </div>
+              <div className="flex justify-between text-base font-semibold text-text-primary pt-2 border-t border-divider">
+                <span>Tổng cộng</span>
+                <span>{currency.format(order.total)}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-divider pt-4">
+              <h3 className="text-sm font-semibold text-text-primary mb-3">Thông tin đơn hàng</h3>
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                {order.customerSnapshot.address && (
+                  <div className="col-span-2">
+                    <dt className="text-text-muted">Địa chỉ</dt>
+                    <dd className="text-text-primary font-medium">{order.customerSnapshot.address}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-text-muted">Thanh toán</dt>
+                  <dd className="text-text-primary font-medium">{PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}</dd>
+                </div>
+                {order.note && (
+                  <div className="col-span-2">
+                    <dt className="text-text-muted">Ghi chú</dt>
+                    <dd className="text-text-primary font-medium">{order.note}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

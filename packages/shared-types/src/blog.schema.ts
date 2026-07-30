@@ -75,6 +75,7 @@ export const createPostBodySchema = z.object({
   title: z.string().min(5, 'Tiêu đề tối thiểu 5 ký tự'),
   excerpt: z.string().min(20, 'Mô tả ngắn tối thiểu 20 ký tự'),
   content: z.string().min(50, 'Nội dung tối thiểu 50 ký tự'),
+  coverImage: coverImageSchema.optional().nullable(),
   categoryId: z.string().optional(),
   relatedProductIds: z.array(z.string()).default([]),
   metaTitle: z.string().optional(),

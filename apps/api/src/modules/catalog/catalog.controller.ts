@@ -42,6 +42,22 @@ export const CatalogController = {
 
   // ── Products (Admin) ──────────────────────────────────────────────────────────
 
+  async adminListProducts(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const query = productQuerySchema.parse(req.query);
+      const { products, total } = await CatalogService.queryProducts(query, true);
+      const totalPages = Math.ceil(total / query.limit);
+      res.json({
+        success: true,
+        message: 'OK',
+        data: products.map(CatalogDTO.productResponse),
+        meta: { total, page: query.page, limit: query.limit, totalPages, hasNextPage: query.page < totalPages, hasPrevPage: query.page > 1 },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async createProduct(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const body = createProductBodySchema.parse(req.body);

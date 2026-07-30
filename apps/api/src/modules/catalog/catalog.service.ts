@@ -9,8 +9,8 @@ const STOCK_LOW_THRESHOLD = 5;
 export const CatalogService = {
   // ── Products ──────────────────────────────────────────────────────────────────
 
-  async queryProducts(query: ProductQuery) {
-    return CatalogRepository.queryProducts(query);
+  async queryProducts(query: ProductQuery, includeInactive = false) {
+    return CatalogRepository.queryProducts(query, includeInactive);
   },
 
   async getProductBySlug(slug: string): Promise<IProduct> {

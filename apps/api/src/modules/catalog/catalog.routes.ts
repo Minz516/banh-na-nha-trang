@@ -10,6 +10,7 @@ router.get('/', publicRateLimit, CatalogController.listProducts);
 router.get('/:slug', publicRateLimit, CatalogController.getProductBySlug);
 
 // Admin — every logged-in User is staff, there is no other role
+router.get('/admin/all', verifyToken, apiRateLimit, CatalogController.adminListProducts);
 router.post('/', verifyToken, apiRateLimit, CatalogController.createProduct);
 router.post('/bulk', verifyToken, apiRateLimit, CatalogController.bulkCreateProducts);
 router.patch('/:id', verifyToken, apiRateLimit, CatalogController.updateProduct);

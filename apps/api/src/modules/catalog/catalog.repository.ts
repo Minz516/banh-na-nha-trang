@@ -14,8 +14,8 @@ export const CatalogRepository = {
     return ProductModel.findById(id);
   },
 
-  async queryProducts(query: ProductQuery): Promise<{ products: IProduct[]; total: number }> {
-    const filter: Record<string, unknown> = { isActive: true };
+  async queryProducts(query: ProductQuery, includeInactive = false): Promise<{ products: IProduct[]; total: number }> {
+    const filter: Record<string, unknown> = includeInactive ? {} : { isActive: true };
 
     if (query.category) {
       const cat = await CategoryModel.findOne({ slug: query.category, isActive: true });

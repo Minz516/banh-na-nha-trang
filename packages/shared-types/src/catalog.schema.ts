@@ -50,6 +50,7 @@ export const createProductBodySchema = z.object({
   promoPrice: z.number().nonnegative().nullable().optional(),
   stock: z.number().int().nonnegative().default(0),
   tags: z.array(z.string()).default([]),
+  images: z.array(productImageSchema).default([]),
   isFeatured: z.boolean().default(false),
   isNewArrival: z.boolean().default(false),
   metaTitle: z.string().optional(),

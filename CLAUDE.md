@@ -20,7 +20,7 @@ pnpm typecheck    # turbo run typecheck
 
 Per-app, use `pnpm --filter <name> <script>` (package names: `api`, `admin`, `storefront`, `@repo/shared-types`), or `cd` into the app directory directly.
 
-- **api**: `tsx watch src/index.ts` (dev), `jest --runInBand` (test — Supertest + `mongodb-memory-server`, no live DB needed), `eslint src` (lint). Run a single Jest test with `pnpm --filter api test -- <pattern>` or `cd apps/api && npx jest <pattern>`.
+- **api**: `tsx watch --env-file=.env src/index.ts` (dev), `jest --runInBand` (test — Supertest + `mongodb-memory-server`, no live DB needed), `eslint src` (lint). Run a single Jest test with `pnpm --filter api test -- <pattern>` or `cd apps/api && npx jest <pattern>`.
 - **admin**: `vite` (dev), `oxlint` (lint, not ESLint), `tsc -b && vite build` (build).
 - **storefront**: `next dev` (Turbopack dev server), `eslint` (flat config, `eslint-config-next`).
 
@@ -35,8 +35,8 @@ Full rationale lives in `ARCHITECTURE_BLUEPRINT_GREENFIELD.md` (why each tech ch
 **Docs describe the target design; the running code is behind it in a few specific ways — check before assuming a doc'd piece exists:**
 - Routes are mounted at `/api/*` in `apps/api/src/app.ts`, not `/api/v1/*` as SRS/blueprint specify. There is no single `/api/v1/admin/*` guard — "admin" endpoints are just `verifyToken`-gated routes scattered per module (e.g. `POST /api/products`, `GET /api/blog/admin/all`). There's no separate role check: any authenticated user is staff (see the comment in `catalog.routes.ts`), so there's no `roleMiddleware.ts`.
 - There is no `cart` API module (no `/api/cart/*` routes), even though `packages/shared-types/src/cart.schema.ts` exists. Cart state currently lives client-side only, in the storefront's `stores/cartStore.ts`.
-- The storefront has no auth-gated surface at all right now (no `middleware.ts`, no `(auth)` route group, no account pages) — customer auth was intentionally ripped out (see git log) and the storefront currently runs off `lib/data/mock-catalog.ts` mock data while the UI shell is built out. Don't assume `/login`, `/account/*`, or `/checkout/success` exist without checking.
-- The admin app (`apps/admin/src`) has a real login flow and router (`App.tsx`), but every route body (`/products`, `/orders`, `/vouchers`, `/blog`) is currently a placeholder — no CRUD UI built yet.
+- The storefront has no auth-gated surface at all right now (no `middleware.ts`, no `(auth)` route group, no account pages) — customer auth was intentionally ripped out (see git log). Don't assume `/login`, `/account/*`, or `/checkout/success` exist without checking. Catalog data is no longer mocked — `lib/data/mock-catalog.ts` has been removed and `/products/[slug]` etc. fetch live from the API via `lib/api/server-public.ts`.
+- The admin app (`apps/admin/src`) has a real login flow and router (`App.tsx`) with routes `/` (Orders), `/customers`, `/products`, `/store`. All four now have real, built-out UIs: Orders/Customers are CRUD screens; `Products.tsx` is a full catalog CRUD UI (grid/table views, search/filter, `ProductFormModal.tsx`, delete confirm); `Store.tsx` is an in-person POS (product picker, cart, customer form, creates orders via `POST /orders/pos`, auto-confirm→complete flow, printable bill). Shared admin catalog types live in `apps/admin/src/lib/catalogTypes.ts` (`ProductRow`, `CategoryRow`, `ProductFormBody`, `LOW_STOCK_THRESHOLD`). There are no `/vouchers` or `/blog` routes yet.
 
 ### Workspace layout
 
@@ -51,6 +51,8 @@ packages/
 ```
 
 `packages/shared-types` has no runtime dependency beyond `zod`. Its schemas drive: API request validation, storefront/admin form validation, and typed fetch calls in all three apps. When changing a domain shape (Product, Order, Cart, Voucher, Post, etc.), edit the schema here first — the type change then surfaces via TS errors in every consumer.
+
+Products carry a real multi-image array (`productImageSchema` in `catalog.schema.ts`: `url`, `publicId`, `alt`, `width`, `height`, `sortOrder`) backed by Cloudinary — consumed by `apps/storefront/components/ProductImageGallery.tsx` and the image grids in admin's `Products.tsx`.
 
 ### API module structure (`apps/api/src/modules/*`)
 

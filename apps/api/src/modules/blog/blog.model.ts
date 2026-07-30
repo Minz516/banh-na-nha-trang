@@ -94,6 +94,18 @@ const postSchema = new Schema<IPost>(
 postSchema.index({ status: 1, publishedAt: -1 });
 postSchema.index({ categoryId: 1, status: 1 });
 
+// Expose populated refs under the field names the API contract (postSchema in
+// shared-types) promises — `category`/`relatedProducts` — instead of the raw
+// `categoryId`/`relatedProductIds` ref fields. Falls back to null/[] when the
+// caller didn't populate (e.g. list views that only need the raw id).
+postSchema.virtual('category').get(function (this: mongoose.HydratedDocument<IPost>) {
+  return this.populated('categoryId') ? this.categoryId : null;
+});
+
+postSchema.virtual('relatedProducts').get(function (this: mongoose.HydratedDocument<IPost>) {
+  return this.populated('relatedProductIds') ? this.relatedProductIds : [];
+});
+
 // Auto-generate slug and estimate reading time on save
 postSchema.pre('save', function (next) {
   if (this.isModified('title')) {

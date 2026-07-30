@@ -27,19 +27,22 @@ export const OrderRepository = {
     return order.save();
   },
 
+  // Note: no .lean() here — lean() skips the schema's toJSON transform (the
+  // _id → id rename in baseSchemaOptions.ts), so callers relying on `.id` on
+  // a single-document fetch would silently get `_id`/`__v` instead.
   async findById(id: string): Promise<IOrder | null> {
-    return OrderModel.findById(id).lean({ virtuals: true });
+    return OrderModel.findById(id);
   },
 
   async findByOrderNumber(orderNumber: string): Promise<IOrder | null> {
-    return OrderModel.findOne({ orderNumber }).lean({ virtuals: true });
+    return OrderModel.findOne({ orderNumber });
   },
 
   async findByOrderNumberAndPhone(orderNumber: string, phone: string): Promise<IOrder | null> {
     return OrderModel.findOne({
       orderNumber,
       'customerSnapshot.phone': phone,
-    }).lean({ virtuals: true });
+    });
   },
 
   async query(q: OrderQuery) {
@@ -81,10 +84,14 @@ export const OrderRepository = {
       id,
       { $set: setFields, $push: $push as object },
       { new: true }
-    ).lean({ virtuals: true });
+    );
   },
 
   async incrementPrintCount(id: string): Promise<IOrder | null> {
-    return OrderModel.findByIdAndUpdate(id, { $inc: { printCount: 1 } }, { new: true }).lean({ virtuals: true });
+    return OrderModel.findByIdAndUpdate(id, { $inc: { printCount: 1 } }, { new: true });
+  },
+
+  async setChannel(id: string, channel: IOrder['channel']): Promise<IOrder | null> {
+    return OrderModel.findByIdAndUpdate(id, { $set: { channel } }, { new: true });
   },
 };
