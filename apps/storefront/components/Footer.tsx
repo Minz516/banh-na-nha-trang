@@ -12,18 +12,9 @@ export function Footer() {
           </p>
         </div>
         <div>
-          <h3 className="font-semibold text-background mb-4 text-sm">Khám phá</h3>
-          <ul className="space-y-3 text-sm">
-            <li><Link href="/products" className="hover:text-accent transition-colors">Sản phẩm</Link></li>
-            <li><Link href="/blog" className="hover:text-accent transition-colors">Câu chuyện</Link></li>
-            <li><Link href="/about" className="hover:text-accent transition-colors">Về chúng tôi</Link></li>
-          </ul>
-        </div>
-        <div>
           <h3 className="font-semibold text-background mb-4 text-sm">Hỗ trợ</h3>
           <ul className="space-y-3 text-sm">
             <li><Link href="/order-lookup" className="hover:text-accent transition-colors">Tra cứu đơn hàng</Link></li>
-            <li><Link href="/cart" className="hover:text-accent transition-colors">Giỏ hàng</Link></li>
           </ul>
         </div>
       </div>

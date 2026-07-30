@@ -10,6 +10,14 @@ const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: '
 
 type OrderResponse = { orderNumber: string };
 
+type VoucherValidationResult = {
+  voucherId: string;
+  code: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  discountAmount: number;
+};
+
 type FormState = {
   fullName: string;
   phone: string;
@@ -54,9 +62,49 @@ export default function CheckoutPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
+  const [voucherInput, setVoucherInput] = useState('');
+  const [appliedVoucher, setAppliedVoucher] = useState<VoucherValidationResult | null>(null);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [voucherChecking, setVoucherChecking] = useState(false);
+
+  const discountAmount = appliedVoucher?.discountAmount ?? 0;
+  const payableTotal = Math.max(total - discountAmount, 0);
+
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  async function handleApplyVoucher() {
+    const code = voucherInput.trim();
+    if (!code) return;
+
+    setVoucherChecking(true);
+    setVoucherError(null);
+    try {
+      const result = await apiClient.post<VoucherValidationResult>('/vouchers/validate', {
+        code,
+        orderTotal: total,
+        ...(form.phone ? { phone: form.phone } : {}),
+      });
+      setAppliedVoucher(result);
+    } catch (err) {
+      setAppliedVoucher(null);
+      setVoucherInput('');
+      setVoucherError(err instanceof ApiError ? err.message : 'Có lỗi xảy ra, vui lòng thử lại.');
+    } finally {
+      setVoucherChecking(false);
+    }
+  }
+
+  function handleRemoveVoucher() {
+    setAppliedVoucher(null);
+    setVoucherInput('');
+    setVoucherError(null);
+  }
+
+  // A code typed but never successfully applied (or applied then edited) must
+  // block checkout — the customer either fixes/removes it or applies it first.
+  const hasUnappliedVoucherInput = voucherInput.trim() !== '' && appliedVoucher?.code !== voucherInput.trim().toUpperCase();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,6 +112,10 @@ export default function CheckoutPage() {
     setErrors({});
 
     if (items.length === 0) return;
+    if (hasUnappliedVoucherInput) {
+      setVoucherError('Vui lòng áp dụng hoặc xóa mã giảm giá trước khi đặt hàng.');
+      return;
+    }
 
     const address = [form.houseNumber, form.street, form.ward, form.city]
       .map((part) => part.trim())
@@ -81,6 +133,7 @@ export default function CheckoutPage() {
           address,
           ...(form.email ? { email: form.email } : {}),
         },
+        ...(appliedVoucher ? { voucherCode: appliedVoucher.code } : {}),
         ...(form.note ? { note: form.note } : {}),
       });
       clearCart();
@@ -95,6 +148,12 @@ export default function CheckoutPage() {
           }
           setErrors(fieldErrors);
           setFormError('Vui lòng kiểm tra lại thông tin bên dưới.');
+        } else if (appliedVoucher && err.message.toLowerCase().includes('giảm giá')) {
+          // The voucher was valid when applied but the order-time re-check rejected it
+          // (e.g. someone else just used up the last slot) — reset it like an invalid code.
+          setAppliedVoucher(null);
+          setVoucherInput('');
+          setVoucherError(err.message);
         } else {
           setFormError(err.message);
         }
@@ -291,16 +350,69 @@ export default function CheckoutPage() {
                   </li>
                 ))}
               </ul>
-              <div className="border-t border-divider pt-4 mb-4 flex justify-between items-end">
-                <span className="font-semibold text-text-primary">Tổng cộng</span>
-                <span className="text-2xl font-bold text-primary">{currency.format(total)}</span>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-text-secondary mb-1">Mã giảm giá</label>
+                {appliedVoucher ? (
+                  <div className="flex items-center justify-between h-11 px-4 rounded-sm border border-primary bg-primary/5">
+                    <span className="text-sm font-medium text-text-primary">
+                      {appliedVoucher.code}:  -{currency.format(appliedVoucher.discountAmount)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveVoucher}
+                      className="text-sm text-text-secondary hover:text-danger transition-colors"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={voucherInput}
+                      onChange={(e) => {
+                        setVoucherInput(e.target.value.toUpperCase());
+                        setVoucherError(null);
+                      }}
+                      placeholder="Nhập mã giảm giá"
+                      className="flex-1 h-11 px-1 rounded-sm border border-border bg-surface outline-none focus:ring-2 focus:ring-focus-ring uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyVoucher}
+                      disabled={voucherChecking || !voucherInput.trim()}
+                      className="h-11 px-5 rounded-sm border border-border text-sm font-semibold text-text-primary hover:bg-background-alt transition-colors disabled:opacity-40"
+                    >
+                      {voucherChecking ? 'Đang kiểm tra...' : 'Áp dụng'}
+                    </button>
+                  </div>
+                )}
+                {voucherError && <p className="text-sm text-danger mt-1">{voucherError}</p>}
+              </div>
+
+              <div className="border-t border-divider pt-4 mb-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-secondary">Tạm tính</span>
+                  <span className="text-text-primary">{currency.format(total)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-secondary">Giảm giá</span>
+                    <span className="text-success">-{currency.format(discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-end pt-2">
+                  <span className="font-semibold text-text-primary">Tổng cộng</span>
+                  <span className="text-2xl font-bold text-primary">{currency.format(payableTotal)}</span>
+                </div>
               </div>
 
               {formError && <p className="text-sm text-danger mb-4">{formError}</p>}
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || hasUnappliedVoucherInput}
                 className="w-full h-12 rounded-md bg-primary text-white font-semibold hover:bg-primary-hover active:bg-primary-active active:scale-[0.98] transition-all disabled:opacity-40"
               >
                 {submitting ? 'Đang xử lý...' : 'Đặt hàng'}

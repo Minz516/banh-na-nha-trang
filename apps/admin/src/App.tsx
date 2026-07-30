@@ -9,6 +9,7 @@ import { Products } from './pages/Products';
 import { Store } from './pages/Store';
 import { Blog } from './pages/Blog';
 import { BlogEditor } from './pages/BlogEditor';
+import { Vouchers } from './pages/Vouchers';
 
 // Admin shell — every child route here requires a verified session.
 // Section 16.7 — sidebar nav, desktop-first (the one context where desktop,
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
       { path: 'customers', element: <Customers /> },
       { path: 'products', element: <Products /> },
       { path: 'store', element: <Store /> },
+      { path: 'vouchers', element: <Vouchers /> },
       { path: 'blog', element: <Blog /> },
       { path: 'blog/new', element: <BlogEditor /> },
       { path: 'blog/:id', element: <BlogEditor /> },

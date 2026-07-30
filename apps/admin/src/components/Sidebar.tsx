@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { ShoppingBag, Users, Package, Store, BookOpen, LogOut } from 'lucide-react';
+import { ShoppingBag, Users, Package, Store, BookOpen, Ticket, LogOut } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Đơn hàng', icon: ShoppingBag, end: true },
   { to: '/customers', label: 'Khách hàng', icon: Users },
   { to: '/products', label: 'Sản phẩm', icon: Package },
   { to: '/store', label: 'Cửa hàng', icon: Store },
+  { to: '/vouchers', label: 'Voucher', icon: Ticket },
   { to: '/blog', label: 'Bài viết', icon: BookOpen },
 ];
 
