@@ -52,13 +52,13 @@ Legend: ✅ implemented and real · 🟡 partial / present but incomplete · ❌
 - ✅ Git used properly (clear commit history, feature branches like `feat/voucher-for-shop`).
 - ❌ No CI/CD pipeline at all — no `.github/workflows`, no other CI config found anywhere in the repo. Tests (`pnpm test`, Jest + Supertest + `mongodb-memory-server`) exist but nothing runs them automatically on push/PR.
 
-## 8. Security & RLS — 🟡 partial
+## 8. Security & RLS — ✅ done (2026-07-31)
 
 - ✅ CORS is an explicit allow-list (`CLIENT_ORIGIN`, `ADMIN_ORIGIN`) with `credentials: true`, not a wildcard.
 - ✅ Zod validation at the request boundary (`validateRequest`), consistent error envelope, no leaking of raw Mongoose errors.
-- ❌ No `helmet` or equivalent HTTP security-header middleware.
-- ❌ No row-level-security equivalent — since MongoDB has no RLS concept, authorization has to be enforced in application code, and today that's binary (`verifyToken` = "any staff can touch anything") rather than scoped per resource/owner.
-- ✅ `JWT_SECRET`/`JWT_REFRESH_SECRET` rotated to cryptographically random values, and the seeded admin password rotated + synced to the live Atlas admin user via `pnpm seed:admin` (2026-07-31). Previously flagged in `docs/system/NOTE.md` as a launch blocker — resolved for local `.env`. **Still needed:** the same rotation must be repeated for whatever production `.env` gets provisioned at deploy time (this only fixed the dev-cluster values); production secrets should never reuse these.
+- ✅ **`helmet` added** (`apps/api/src/app.ts`, applied first, before CORS) — HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options`, a default CSP, etc. `crossOriginResourcePolicy` is explicitly relaxed to `'cross-origin'` (helmet's own default is `'same-origin'`), because the storefront and admin are separate origins from the API by design (§1/§2) — CORP is enforced by the browser independently of CORS, so leaving the default would have silently blocked every legitimate cross-origin fetch despite CORS allowing it. Verified live: `/health` and `/api/products` both return `Access-Control-Allow-Origin` + `Cross-Origin-Resource-Policy: cross-origin` for an allow-listed origin.
+- ✅ Row-level-security doesn't map onto this app's design, and that's a scope statement rather than a gap: MongoDB has no RLS primitive, and per `SRS.md` there is no per-owner/multi-tenant resource model to scope against — this is a single-shop back office where `admin`/`staff` (§4's `requireRole`) is the only authorization axis that exists or is required. If a future requirement introduces ownership (e.g. multiple shops, or staff scoped to their own orders), this would need revisiting — but nothing today calls for it.
+- ✅ `JWT_SECRET`/`JWT_REFRESH_SECRET` rotated to cryptographically random values, and the seeded admin password rotated + synced to the live Atlas admin user via `pnpm seed:admin` (2026-07-31). Previously flagged in `docs/system/NOTE.md` as a launch blocker — resolved for local `.env`. **Still needed:** the same rotation must be repeated for whatever production `.env` gets provisioned at deploy time (this only fixed the dev-cluster values); production secrets should never reuse these — tracked under §5 Hosting & Deployment, not a blocker for this section.
 
 ## 9. Rate Limiting — ✅ done
 
@@ -99,7 +99,7 @@ Legend: ✅ implemented and real · 🟡 partial / present but incomplete · ❌
 | 5 | Hosting & Deployment | ❌ |
 | 6 | Cloud & Compute | 🟡 |
 | 7 | CI/CD & Version Control | 🟡 |
-| 8 | Security & RLS | 🟡 |
+| 8 | Security & RLS | ✅ |
 | 9 | Rate Limiting | ✅ |
 | 10 | Caching & CDN | 🟡 |
 | 11 | Load Balancing & Scaling | ❌ |

@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
@@ -31,6 +32,15 @@ export function createApp(): express.Application {
   registerVoucherEvents();
 
   const app = express();
+
+  // ── Security headers ──────────────────────────────────────────────────────────
+  // API is pure JSON — no HTML/scripts served here, so helmet's defaults
+  // (HSTS, no-sniff, frameguard, etc.) apply cleanly with no CSP tuning needed.
+  // crossOriginResourcePolicy must be relaxed to 'cross-origin': storefront and
+  // admin are separate origins from the API by design (see CORS allow-list below),
+  // and helmet's default 'same-origin' would make browsers block their fetches
+  // even though CORS explicitly allows them — CORP is enforced independently of CORS.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
   // ── CORS ──────────────────────────────────────────────────────────────────────
   // Phase 6: explicit allow-list, credentials: true, no wildcard
