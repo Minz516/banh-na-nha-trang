@@ -1,9 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import type { Order } from '@repo/shared-types';
-import { apiClient } from '@/lib/api/client';
-import { ApiError } from '@/lib/api/errors';
+import { useOrderLookup } from '@/hooks/useOrderLookup';
 import {
   CUSTOMER_STATUS_LABELS,
   STATUS_TONES,
@@ -13,45 +11,8 @@ import {
   dateTimeFormat,
 } from '@/lib/orderFormat';
 
-type FormState = { orderNumber: string; phone: string };
-
-const INITIAL_FORM: FormState = { orderNumber: '', phone: '' };
-
-// Guest order tracking (SRS.md D5): no account, keyed by orderNumber + phone —
-// mirrors the same phone-first identity checkout uses (POST /orders/lookup).
 export default function OrderLookupPage() {
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
-  const [order, setOrder] = useState<Order | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      const result = await apiClient.post<Order>('/orders/lookup', {
-        orderNumber: form.orderNumber.trim(),
-        phone: form.phone.trim(),
-      });
-      setOrder(result);
-    } catch (err) {
-      setOrder(null);
-      setError(err instanceof ApiError ? err.message : 'Có lỗi xảy ra, vui lòng thử lại.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  function handleReset() {
-    setOrder(null);
-    setError(null);
-    setForm(INITIAL_FORM);
-  }
+  const { form, order, submitting, error, updateField, submit, reset } = useOrderLookup();
 
   return (
     <div className="py-12 md:py-16 bg-background-alt min-h-screen">
@@ -62,7 +23,7 @@ export default function OrderLookupPage() {
         </p>
 
         {!order && (
-          <form onSubmit={handleSubmit} className="bg-card p-6 md:p-8 rounded-md shadow-sm space-y-4">
+          <form onSubmit={submit} className="bg-card p-6 md:p-8 rounded-md shadow-sm space-y-4">
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">Mã đơn hàng</label>
               <input
@@ -98,7 +59,7 @@ export default function OrderLookupPage() {
           </form>
         )}
 
-        {order && <OrderResult order={order} onReset={handleReset} />}
+        {order && <OrderResult order={order} onReset={reset} />}
       </div>
     </div>
   );

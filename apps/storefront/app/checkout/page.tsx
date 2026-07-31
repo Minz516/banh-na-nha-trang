@@ -1,176 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useCartStore } from '@/stores/cartStore';
-import { apiClient } from '@/lib/api/client';
-import { ApiError } from '@/lib/api/errors';
+import { useCheckoutForm } from '@/hooks/useCheckoutForm';
+import { useCartHydrated } from '@/hooks/useCartHydrated';
 
 const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 
-type OrderResponse = { orderNumber: string };
-
-type VoucherValidationResult = {
-  voucherId: string;
-  code: string;
-  type: 'percentage' | 'fixed';
-  value: number;
-  discountAmount: number;
-};
-
-type FormState = {
-  fullName: string;
-  phone: string;
-  houseNumber: string;
-  street: string;
-  ward: string;
-  city: string;
-  email: string;
-  paymentMethod: 'cod' | 'bank_transfer';
-  note: string;
-};
-
-const INITIAL_FORM: FormState = {
-  fullName: '',
-  phone: '',
-  houseNumber: '',
-  street: '',
-  ward: '',
-  city: '',
-  email: '',
-  paymentMethod: 'cod',
-  note: '',
-};
-
-// Checkout is guest-only (SRS.md D5): this form's fullName/phone/email upsert the
-// Customer record by phone — there is no account, login, or saved-address step.
 export default function CheckoutPage() {
-  const items = useCartStore((state) => state.items);
-  const total = useCartStore((state) => state.total);
-  const clearCart = useCartStore((state) => state.clearCart);
-
-  const [hydrated, setHydrated] = useState(() => useCartStore.persist?.hasHydrated() ?? false);
-  useEffect(() => {
-    const unsubscribe = useCartStore.persist?.onFinishHydration(() => setHydrated(true));
-    useCartStore.persist?.rehydrate();
-    return unsubscribe;
-  }, []);
-
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [orderNumber, setOrderNumber] = useState<string | null>(null);
-
-  const [voucherInput, setVoucherInput] = useState('');
-  const [appliedVoucher, setAppliedVoucher] = useState<VoucherValidationResult | null>(null);
-  const [voucherError, setVoucherError] = useState<string | null>(null);
-  const [voucherChecking, setVoucherChecking] = useState(false);
-
-  const discountAmount = appliedVoucher?.discountAmount ?? 0;
-  const payableTotal = Math.max(total - discountAmount, 0);
-
-  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  async function handleApplyVoucher() {
-    const code = voucherInput.trim();
-    if (!code) return;
-
-    setVoucherChecking(true);
-    setVoucherError(null);
-    try {
-      const result = await apiClient.post<VoucherValidationResult>('/vouchers/validate', {
-        code,
-        orderTotal: total,
-        ...(form.phone ? { phone: form.phone } : {}),
-      });
-      setAppliedVoucher(result);
-    } catch (err) {
-      setAppliedVoucher(null);
-      setVoucherInput('');
-      setVoucherError(err instanceof ApiError ? err.message : 'Có lỗi xảy ra, vui lòng thử lại.');
-    } finally {
-      setVoucherChecking(false);
-    }
-  }
-
-  function handleRemoveVoucher() {
-    setAppliedVoucher(null);
-    setVoucherInput('');
-    setVoucherError(null);
-  }
-
-  // A code typed but never successfully applied (or applied then edited) must
-  // block checkout — the customer either fixes/removes it or applies it first.
-  const hasUnappliedVoucherInput = voucherInput.trim() !== '' && appliedVoucher?.code !== voucherInput.trim().toUpperCase();
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-    setErrors({});
-
-    if (items.length === 0) return;
-    if (hasUnappliedVoucherInput) {
-      setVoucherError('Vui lòng áp dụng hoặc xóa mã giảm giá trước khi đặt hàng.');
-      return;
-    }
-
-    const address = [form.houseNumber, form.street, form.ward, form.city]
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .join(', ');
-
-    setSubmitting(true);
-    try {
-      const result = await apiClient.post<OrderResponse>('/orders', {
-        items: items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
-        paymentMethod: form.paymentMethod,
-        customerInfo: {
-          fullName: form.fullName,
-          phone: form.phone,
-          address,
-          ...(form.email ? { email: form.email } : {}),
-        },
-        ...(appliedVoucher ? { voucherCode: appliedVoucher.code } : {}),
-        ...(form.note ? { note: form.note } : {}),
-      });
-      clearCart();
-      setOrderNumber(result.orderNumber);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 400 && err.cause && typeof err.cause === 'object') {
-          const fieldErrors: Record<string, string> = {};
-          for (const [key, messages] of Object.entries(err.cause as Record<string, string[]>)) {
-            const flatKey = key.split('.').pop() ?? key;
-            if (Array.isArray(messages) && messages[0]) fieldErrors[flatKey] = messages[0];
-          }
-          setErrors(fieldErrors);
-          setFormError('Vui lòng kiểm tra lại thông tin bên dưới.');
-        } else if (appliedVoucher && err.message.toLowerCase().includes('giảm giá')) {
-          // The voucher was valid when applied but the order-time re-check rejected it
-          // (e.g. someone else just used up the last slot) — reset it like an invalid code.
-          setAppliedVoucher(null);
-          setVoucherInput('');
-          setVoucherError(err.message);
-        } else {
-          setFormError(err.message);
-        }
-      } else {
-        setFormError('Có lỗi xảy ra, vui lòng thử lại.');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const hydrated = useCartHydrated();
+  const {
+    items,
+    total,
+    form,
+    errors,
+    submitting,
+    formError,
+    orderNumber,
+    voucherInput,
+    appliedVoucher,
+    voucherError,
+    voucherChecking,
+    discountAmount,
+    payableTotal,
+    hasUnappliedVoucherInput,
+    updateField,
+    updateVoucherInput,
+    applyVoucher,
+    removeVoucher,
+    submit,
+  } = useCheckoutForm();
 
   if (orderNumber) {
     return (
       <div className="py-24 text-center px-6">
         <h1 className="font-display text-3xl text-text-primary mb-4">Cảm ơn bạn đã đặt hàng!</h1>
         <p className="text-text-secondary mb-2">
-          Mã đơn hàng của bạn là <span className="font-semibold text-text-primary">{orderNumber}</span>
+          Mã đơn hàng của bạn là <span className="font-semibold text-text-primary">{orderNumber}</span>. Hay lưu lại mã này để tra cứu trạng thái đơn hàng.
         </p>
         <p className="text-text-secondary mb-8">
           Chúng tôi sẽ liên hệ qua số điện thoại bạn đã cung cấp để xác nhận đơn hàng.
@@ -209,7 +74,7 @@ export default function CheckoutPage() {
       <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
         <h1 className="font-display text-3xl text-text-primary mb-8">Thanh toán</h1>
 
-        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-8">
+        <form onSubmit={submit} className="flex flex-col lg:flex-row gap-8">
           <div className="w-full lg:w-2/3 space-y-6">
             <div className="bg-card p-6 md:p-8 rounded-md shadow-sm">
               <h2 className="font-display text-xl text-text-primary mb-6">1. Thông tin giao hàng</h2>
@@ -360,7 +225,7 @@ export default function CheckoutPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={handleRemoveVoucher}
+                      onClick={removeVoucher}
                       className="text-sm text-text-secondary hover:text-danger transition-colors"
                     >
                       Xóa
@@ -371,16 +236,13 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       value={voucherInput}
-                      onChange={(e) => {
-                        setVoucherInput(e.target.value.toUpperCase());
-                        setVoucherError(null);
-                      }}
+                      onChange={(e) => updateVoucherInput(e.target.value)}
                       placeholder="Nhập mã giảm giá"
                       className="flex-1 h-11 px-1 rounded-sm border border-border bg-surface outline-none focus:ring-2 focus:ring-focus-ring uppercase"
                     />
                     <button
                       type="button"
-                      onClick={handleApplyVoucher}
+                      onClick={applyVoucher}
                       disabled={voucherChecking || !voucherInput.trim()}
                       className="h-11 px-5 rounded-sm border border-border text-sm font-semibold text-text-primary hover:bg-background-alt transition-colors disabled:opacity-40"
                     >
