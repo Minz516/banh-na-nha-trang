@@ -1,13 +1,17 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/token.util.js';
 import { AuthInterfaces } from '../modules/auth/auth.interfaces.js';
-import type { JwtPayload } from '@repo/shared-types';
+import type { JwtPayload, UserRole } from '@repo/shared-types';
 
-// Augment Express Request to carry the decoded JWT payload
+// Augment Express Request to carry the decoded JWT payload plus the role read
+// fresh from the DB on this request (never trust a role baked into the JWT —
+// see the comment on jwtPayloadSchema in shared-types). role is only set by
+// verifyToken; optionalVerifyToken leaves it undefined, so requireRole must
+// treat a missing role as "no permission", not "any permission".
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      user?: JwtPayload & { role?: UserRole };
     }
   }
 }
@@ -44,7 +48,7 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    req.user = payload;
+    req.user = { ...payload, role: user.role };
     next();
   } catch (err) {
     const isExpired = (err as Error).name === 'TokenExpiredError';

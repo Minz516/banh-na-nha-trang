@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { CatalogController } from './catalog.controller.js';
 import { verifyToken } from '../../middlewares/authMiddleware.js';
+import { requireRole } from '../../middlewares/roleMiddleware.js';
 import { publicRateLimit, apiRateLimit } from '../../middlewares/rateLimitMiddleware.js';
 
 const router = Router();
@@ -8,9 +9,11 @@ const router = Router();
 // Public
 router.get('/', publicRateLimit, CatalogController.listCategories);
 
-// Admin
+// Admin/staff
 router.post('/', verifyToken, apiRateLimit, CatalogController.createCategory);
 router.patch('/:id', verifyToken, apiRateLimit, CatalogController.updateCategory);
-router.delete('/:id', verifyToken, apiRateLimit, CatalogController.deleteCategory);
+
+// Admin only — destructive
+router.delete('/:id', verifyToken, requireRole('admin'), apiRateLimit, CatalogController.deleteCategory);
 
 export default router;

@@ -2,6 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import { AuthService } from './auth.service.js';
 import { AuthDTO } from './auth.dto.js';
 import { issueTokenCookies, clearTokenCookies, verifyRefreshToken } from '../../utils/token.util.js';
+import { validateRequest } from '../../middlewares/errorMiddleware.js';
+import { createUserBodySchema, updateUserBodySchema } from '@repo/shared-types';
 
 export const AuthController = {
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -51,4 +53,39 @@ export const AuthController = {
       next(err);
     }
   },
+
+  // ── User management (admin only) ────────────────────────────────────────────
+
+  createUser: [
+    validateRequest(createUserBodySchema),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      try {
+        const user = await AuthService.createUser(req.body);
+        res.status(201).json({ success: true, message: 'Đã tạo tài khoản', data: AuthDTO.userListItem(user), meta: null });
+      } catch (err) {
+        next(err);
+      }
+    },
+  ],
+
+  async listUsers(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const users = await AuthService.listUsers();
+      res.json({ success: true, data: users.map(AuthDTO.userListItem), meta: null });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  updateUser: [
+    validateRequest(updateUserBodySchema),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      try {
+        const user = await AuthService.updateUser(req.params.id as string, req.body, req.user!.userId);
+        res.json({ success: true, message: 'Đã cập nhật', data: AuthDTO.userListItem(user), meta: null });
+      } catch (err) {
+        next(err);
+      }
+    },
+  ],
 };

@@ -16,6 +16,7 @@ async function seedAdmin(): Promise<void> {
     // pre-save bcrypt hook, so the account always matches .env exactly.
     existing.passwordHash = env.ADMIN_PASSWORD;
     existing.phone = env.ADMIN_PHONE;
+    existing.role = 'admin';
     existing.isActive = true;
     await existing.save();
     console.log(`✅ Admin user synced with .env: ${env.ADMIN_EMAIL}`);
@@ -24,6 +25,7 @@ async function seedAdmin(): Promise<void> {
       email: env.ADMIN_EMAIL,
       passwordHash: env.ADMIN_PASSWORD, // hashed by the model's pre-save hook
       phone: env.ADMIN_PHONE,
+      role: 'admin',
     });
     console.log(`✅ Admin user created: ${env.ADMIN_EMAIL}`);
   }

@@ -6,6 +6,7 @@ export type AuthUser = {
   id: string;
   email: string;
   isActive: boolean;
+  role: 'admin' | 'staff';
 };
 
 type SessionStatus = 'checking' | 'authenticated' | 'unauthenticated';

@@ -47,8 +47,9 @@ Pagination query: `?page=1&limit=10` (limit capped at 100, except `GET /blog` wh
 - Client-side fetch must set `credentials: 'include'`.
 - Server-side fetch (Next.js Server Component) must forward the cookie manually — see `docs/system/SEO_CONTEXT.md` §6.1.
 - Cookie attributes: in production, `Domain=.banhtrangnhana.com`, `Secure`, `SameSite=None` (so storefront and admin, both subdomains, can share it). In development, no `Domain` attribute and `SameSite=Lax` — `localhost` ports count as same-site.
-- `verifyToken` — rejects unauthenticated requests. `optionalVerifyToken` — accepts both guests and authenticated users: used on `POST /orders` and `POST /vouchers/validate`, since checkout never requires an account.
-- `requireRole('admin')` — used alongside `verifyToken` on every admin-only route.
+- `verifyToken` — rejects unauthenticated requests, and re-reads the account's `role`/`isActive` from the DB on every request (not from the JWT) so a role change or deactivation takes effect immediately, not after a 15-minute token expiry. `optionalVerifyToken` — accepts both guests and authenticated users: used on `POST /orders` and `POST /vouchers/validate`, since checkout never requires an account.
+- Two roles: `admin` (the owner — full access, including destructive actions and vouchers) and `staff` (day-to-day: orders, POS, product/blog editing, uploads). Every `User` defaults to `staff`; the seeded owner account (`ADMIN_EMAIL` in `.env`) is `admin`.
+- `requireRole('admin')` — stacked after `verifyToken` only on routes that are destructive or financial: `DELETE /products/:id`, `DELETE /categories/:id`, `DELETE /blog/:id`, `DELETE /blog/categories/:id`, all of `POST|PATCH|DELETE /vouchers*` except `/vouchers/validate`, `GET /customers/export`, and all of `/auth/users/*`. Every other admin route (reads, order status updates, product/blog create-or-edit, media upload) only requires `verifyToken` — any active staff account can use them.
 
 **Note on admin route shape:** `docs/system/SRS.md` §5 specifies that admin routes should live uniformly under `/api/v1/admin/*` behind one middleware. **The running code does not do this.** Admin actions are mounted on the same resource router as their public counterpart, differentiated by HTTP method and `requireRole('admin')` per-route (e.g. `POST /api/products` is admin, `GET /api/products` is public, at the same base path). The blog module is the partial exception — it nests its admin-only reads under `/api/blog/admin/*` — but this isn't applied consistently elsewhere (`/api/orders/pos`, `/api/customers/export`, etc. are flat). Documented here as-is; do not assume a route is public or admin from its path alone — check the table below.
 
@@ -58,20 +59,27 @@ Pagination query: `?page=1&limit=10` (limit capped at 100, except `GET /blog` wh
 
 ### Auth — `/api/auth`
 
+**Note:** `docs/system/SRS.md`'s `registerBodySchema` (`POST /auth/register`, customer self-signup) does not exist in the running code — admin/staff login is the only auth flow; there is no customer-facing registration (checkout is guest-only, see `CLAUDE.md`). The table below is the real, current route set.
+
 | Method | Path | Auth | Rate limit | Body |
 |---|---|---|---|---|
-| POST | `/auth/register` | — | `authRateLimit` | `{ email, password, fullName, phone }` |
 | POST | `/auth/login` | — | `authRateLimit` | `{ email, password }` |
-| POST | `/auth/refresh-token` | refresh cookie | — | — |
+| POST | `/auth/refresh-token` | refresh cookie | `authRateLimit` | — |
 | POST | `/auth/logout` | — | — | — |
+| GET | `/auth/me` | user | — | — |
+| GET | `/auth/users` | admin | `apiRateLimit` | — |
+| POST | `/auth/users` | admin | `apiRateLimit` | `{ email, password, phone?, role? }` |
+| PATCH | `/auth/users/:id` | admin | `apiRateLimit` | `{ role?, isActive? }` |
 
 `authRateLimit`: 20 requests / 15 min per IP.
 
-`register` (201) / `login` (200) issue both cookies and return `{ id, email, role, isActive }`.
+`login` (200) issues both cookies and returns `{ id, email, role, isActive }`. `me` returns the same shape for the current session.
 
-Validation (`registerBodySchema`): `email` valid format, `password` ≥ 6 chars, `fullName` ≥ 2 chars, `phone` ≥ 9 chars.
+Validation (`loginBodySchema`): `email` valid format, `password` non-empty.
 
 `refresh-token` reads `refresh_token` from the cookie jar; `401` with `cause: null` if absent or invalid. On success, re-issues both cookies and returns `{ success: true, message, data: null }`.
+
+`POST /auth/users` / `PATCH /auth/users/:id` (`createUserBodySchema` / `updateUserBodySchema`) let an `admin` create additional staff/admin accounts and change role or `isActive` on existing ones — this is currently the only way to provision a second account; there is no admin-panel UI for it yet. An admin cannot demote or deactivate their own account (self-lockout guard in `AuthService.updateUser`) — another admin must do it. Returns `{ id, email, phone, role, isActive, lastLoginAt, createdAt }`.
 
 ### Customer — `/api/customers`
 
@@ -80,9 +88,9 @@ Validation (`registerBodySchema`): `email` valid format, `password` ≥ 6 chars,
 | GET | `/customers/me` | user | — |
 | PATCH | `/customers/me` | user | `{ fullName?, phone?, dateOfBirth? }` |
 | POST | `/customers/addresses` | user | `{ label?, fullAddress, ward?, district?, city?, isDefault? }` |
-| GET | `/customers` | admin | `?search&page&limit` |
+| GET | `/customers` | staff | `?search&page&limit` |
 | GET | `/customers/export` | admin | `?format=json\|csv` |
-| GET | `/customers/:id` | admin | — |
+| GET | `/customers/:id` | staff | — |
 
 `label` ∈ `home` \| `work` \| `other`, default `home`. `fullAddress` min 5 chars.
 
@@ -94,14 +102,14 @@ Validation (`registerBodySchema`): `email` valid format, `password` ≥ 6 chars,
 |---|---|---|---|
 | GET | `/products` | — | `publicRateLimit` |
 | GET | `/products/:slug` | — | `publicRateLimit` |
-| POST | `/products` | admin | — |
-| POST | `/products/bulk` | admin | — |
-| PATCH | `/products/:id` | admin | — |
-| PATCH | `/products/:id/stock` | admin | — |
+| POST | `/products` | staff | — |
+| POST | `/products/bulk` | staff | — |
+| PATCH | `/products/:id` | staff | — |
+| PATCH | `/products/:id/stock` | staff | — |
 | DELETE | `/products/:id` | admin | — |
 | GET | `/categories` | — | `publicRateLimit` |
-| POST | `/categories` | admin | — |
-| PATCH | `/categories/:id` | admin | — |
+| POST | `/categories` | staff | — |
+| PATCH | `/categories/:id` | staff | — |
 | DELETE | `/categories/:id` | admin | — |
 
 `publicRateLimit`: 500 requests / 15 min per IP (sized for crawler + ISR build traffic).
@@ -152,11 +160,11 @@ The cart lives entirely client-side, in the storefront's `stores/cartStore.ts` (
 | POST | `/orders` | optional (`optionalVerifyToken`) |
 | POST | `/orders/lookup` | — (`publicRateLimit`) |
 | GET | `/orders/me` | user |
-| GET | `/orders` | admin |
-| POST | `/orders/pos` | admin |
-| GET | `/orders/:id` | admin |
-| PATCH | `/orders/:id/status` | admin |
-| POST | `/orders/:id/print` | admin |
+| GET | `/orders` | staff |
+| POST | `/orders/pos` | staff |
+| GET | `/orders/:id` | staff |
+| PATCH | `/orders/:id/status` | staff |
+| POST | `/orders/:id/print` | staff |
 
 `POST /orders` body (`placeOrderBodySchema`):
 
@@ -209,7 +217,7 @@ Customers may only cancel from `pending` — every other transition is admin-onl
 | Method | Path | Auth |
 |---|---|---|
 | POST | `/vouchers/validate` | optional (`optionalVerifyToken`) |
-| GET | `/vouchers` | admin |
+| GET | `/vouchers` | staff |
 | POST | `/vouchers` | admin |
 | PATCH | `/vouchers/:id` | admin |
 | DELETE | `/vouchers/:id` | admin |
@@ -227,13 +235,13 @@ Customers may only cancel from `pending` — every other transition is admin-onl
 | GET | `/blog/categories/:slug` | — |
 | GET | `/blog` | — |
 | GET | `/blog/:slug` | — |
-| GET | `/blog/admin/all` | admin |
-| GET | `/blog/admin/:id` | admin |
-| POST | `/blog` | admin |
-| PATCH | `/blog/:id` | admin |
+| GET | `/blog/admin/all` | staff |
+| GET | `/blog/admin/:id` | staff |
+| POST | `/blog` | staff |
+| PATCH | `/blog/:id` | staff |
 | DELETE | `/blog/:id` | admin |
-| POST | `/blog/categories` | admin |
-| PATCH | `/blog/categories/:id` | admin |
+| POST | `/blog/categories` | staff |
+| PATCH | `/blog/categories/:id` | staff |
 | DELETE | `/blog/categories/:id` | admin |
 
 `GET /blog` query (`postQuerySchema`): `category` (slug), `search`, `page`, `limit` (default 9, max 50). Public reads (`GET /blog`, `GET /blog/:slug`, `GET /blog/latest`) exclude drafts and future-dated posts; `GET /blog/admin/all` and `GET /blog/admin/:id` include them.
