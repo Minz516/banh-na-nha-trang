@@ -1,4 +1,5 @@
 import { CatalogRepository } from './catalog.repository.js';
+import { clearPublicCatalogCache } from './catalog.service.js';
 import type { IProduct } from './catalog.model.js';
 
 /**
@@ -30,11 +31,15 @@ export const CatalogInterfaces = {
    * D4: Atomic stock decrement — returns null if insufficient stock.
    */
   async decrementStock(productId: string, qty: number): Promise<IProduct | null> {
-    return CatalogRepository.decrementStock(productId, qty);
+    const updated = await CatalogRepository.decrementStock(productId, qty);
+    if (updated) clearPublicCatalogCache();
+    return updated;
   },
 
   async incrementStock(productId: string, qty: number): Promise<IProduct | null> {
-    return CatalogRepository.incrementStock(productId, qty);
+    const updated = await CatalogRepository.incrementStock(productId, qty);
+    if (updated) clearPublicCatalogCache();
+    return updated;
   },
 
   async getProductsByIds(ids: string[]): Promise<IProduct[]> {

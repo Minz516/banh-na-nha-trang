@@ -1,5 +1,4 @@
 import { VoucherService } from './voucher.service.js';
-import type { IVoucher } from './voucher.model.js';
 
 export const VoucherInterfaces = {
   async validateVoucher(code: string, orderTotal: number, phone?: string) {

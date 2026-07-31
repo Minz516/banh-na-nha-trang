@@ -1,12 +1,13 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import mongoose from 'mongoose';
+import { logger } from '../config/logger.config.js';
+import { Sentry } from '../config/sentry.config.js';
 
 /**
  * Global error handler — maps Zod/Mongoose/application errors
  * to the standard envelope: { success: false, error: { statusCode, message, cause } }
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function errorMiddleware(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
   // Zod validation error
   if (err instanceof ZodError) {
@@ -61,6 +62,10 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
 
   // AppError (custom with statusCode)
   if (err instanceof AppError) {
+    if (err.statusCode >= 500) {
+      logger.error({ err }, 'AppError (5xx)');
+      Sentry.captureException(err);
+    }
     res.status(err.statusCode).json({
       success: false,
       error: { statusCode: err.statusCode, message: err.message, cause: err.cause ?? null },
@@ -79,7 +84,8 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
 
   // Unknown error
   const message = err instanceof Error ? err.message : 'Internal server error';
-  console.error('Unhandled error:', err);
+  logger.error({ err }, 'Unhandled error');
+  Sentry.captureException(err);
   res.status(500).json({
     success: false,
     error: { statusCode: 500, message, cause: null },

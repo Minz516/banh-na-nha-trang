@@ -1,12 +1,15 @@
 import { eventBus, AppEvents } from '../../utils/eventBus.js';
 import { CustomerInterfaces } from './customer.interfaces.js';
+import { logger } from '../../config/logger.config.js';
+import { Sentry } from '../../config/sentry.config.js';
 
 export function registerCustomerEvents(): void {
   eventBus.on(AppEvents.ORDER_PLACED, async (payload: { customerId: string; total: number }) => {
     try {
       await CustomerInterfaces.incrementStats(payload.customerId, payload.total);
     } catch (err) {
-      console.error('[customer.events] ORDER_PLACED handler error:', err);
+      logger.error({ err }, '[customer.events] ORDER_PLACED handler error');
+      Sentry.captureException(err);
     }
   });
 
@@ -14,7 +17,8 @@ export function registerCustomerEvents(): void {
     try {
       await CustomerInterfaces.decrementStats(payload.customerId, payload.total);
     } catch (err) {
-      console.error('[customer.events] ORDER_CANCELLED handler error:', err);
+      logger.error({ err }, '[customer.events] ORDER_CANCELLED handler error');
+      Sentry.captureException(err);
     }
   });
 }

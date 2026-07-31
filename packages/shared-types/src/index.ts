@@ -8,7 +8,6 @@ export * from './common.schema.js';
 export * from './auth.schema.js';
 export * from './customer.schema.js';
 export * from './catalog.schema.js';
-export * from './cart.schema.js';
 export * from './order.schema.js';
 export * from './voucher.schema.js';
 export * from './blog.schema.js';

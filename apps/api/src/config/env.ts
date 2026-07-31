@@ -27,6 +27,9 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.string().email().default('admin@banhtrangnhana.com'),
   ADMIN_PASSWORD: z.string().min(6).default('adminPassword123'),
   ADMIN_PHONE: z.string().optional(),
+
+  // Error tracking (optional — unset disables Sentry entirely, see sentry.config.ts)
+  SENTRY_DSN: z.string().optional(),
 });
 
 const _parsed = envSchema.safeParse(process.env);

@@ -40,3 +40,6 @@ coverage
 
 # misc
 *.tsbuildinfo
+
+# local DB backups (see docs/system/BACKUP_RESTORE.md)
+apps/api/backups/

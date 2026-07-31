@@ -149,9 +149,9 @@ Validation (`loginBodySchema`): `email` valid format, `password` non-empty.
 
 ### Cart — not implemented
 
-`packages/shared-types/src/cart.schema.ts` defines `GuestCartItem` and a server-cart shape, and earlier planning docs (`SRS.md` §5, `ARCHITECTURE_BLUEPRINT_GREENFIELD.md` §2.3) describe a `cart` API module (`GET /cart`, `POST /cart/items`, `PATCH /cart/items/:itemId`, `DELETE /cart/items/:itemId`, `DELETE /cart`, auth required) — **none of this exists in the running code.** There is no `cart` directory under `apps/api/src/modules`, and no `/cart` route is mounted in `app.ts`.
+Earlier planning docs (`SRS.md` §5, `ARCHITECTURE_BLUEPRINT_GREENFIELD.md` §2.3) describe a `cart` API module (`GET /cart`, `POST /cart/items`, `PATCH /cart/items/:itemId`, `DELETE /cart/items/:itemId`, `DELETE /cart`, auth required) — **none of this exists in the running code.** There is no `cart` directory under `apps/api/src/modules`, and no `/cart` route is mounted in `app.ts`. `packages/shared-types/src/cart.schema.ts` (the `GuestCartItem`/server-cart shape reserved for this) was deleted (2026-07-31) after confirming it had no importers anywhere in the codebase — the storefront's `cartStore.ts` defines its own local type instead.
 
-The cart lives entirely client-side, in the storefront's `stores/cartStore.ts` (browser storage), for both guests and logged-in users. `POST /orders` accepts `items[]` directly from the request body and never reads a server-side cart. If a server-side cart for authenticated users (multi-device sync) is ever built, it belongs here — see the shape already reserved in `cart.schema.ts`.
+The cart lives entirely client-side, in the storefront's `stores/cartStore.ts` (browser storage), for both guests and logged-in users. `POST /orders` accepts `items[]` directly from the request body and never reads a server-side cart. If a server-side cart for authenticated users (multi-device sync) is ever built, its shape would need to be re-added to `shared-types` at that point.
 
 ### Order — `/api/orders`
 

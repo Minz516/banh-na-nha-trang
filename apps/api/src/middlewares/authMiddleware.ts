@@ -9,6 +9,7 @@ import type { JwtPayload, UserRole } from '@repo/shared-types';
 // verifyToken; optionalVerifyToken leaves it undefined, so requireRole must
 // treat a missing role as "no permission", not "any permission".
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- required shape for Express's own ambient type augmentation
   namespace Express {
     interface Request {
       user?: JwtPayload & { role?: UserRole };

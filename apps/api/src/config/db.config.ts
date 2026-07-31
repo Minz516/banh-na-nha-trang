@@ -1,19 +1,22 @@
 import mongoose from 'mongoose';
 import { env } from './env.js';
+import { logger } from './logger.config.js';
+import { Sentry } from './sentry.config.js';
 
 export async function connectDB(): Promise<void> {
   const uri = env.MONGODB_URI;
 
   mongoose.connection.on('connected', () => {
-    console.log('✅ MongoDB connected');
+    logger.info('✅ MongoDB connected');
   });
 
   mongoose.connection.on('error', (err) => {
-    console.error('❌ MongoDB connection error:', err);
+    logger.error({ err }, '❌ MongoDB connection error');
+    Sentry.captureException(err);
   });
 
   mongoose.connection.on('disconnected', () => {
-    console.warn('⚠️  MongoDB disconnected');
+    logger.warn('⚠️  MongoDB disconnected');
   });
 
   await mongoose.connect(uri, {

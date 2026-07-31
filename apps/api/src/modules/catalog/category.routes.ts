@@ -3,11 +3,12 @@ import { CatalogController } from './catalog.controller.js';
 import { verifyToken } from '../../middlewares/authMiddleware.js';
 import { requireRole } from '../../middlewares/roleMiddleware.js';
 import { publicRateLimit, apiRateLimit } from '../../middlewares/rateLimitMiddleware.js';
+import { publicCache } from '../../middlewares/cacheMiddleware.js';
 
 const router = Router();
 
 // Public
-router.get('/', publicRateLimit, CatalogController.listCategories);
+router.get('/', publicRateLimit, publicCache(300), CatalogController.listCategories);
 
 // Admin/staff
 router.post('/', verifyToken, apiRateLimit, CatalogController.createCategory);

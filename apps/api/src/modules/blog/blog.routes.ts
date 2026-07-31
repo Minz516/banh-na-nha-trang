@@ -3,15 +3,16 @@ import { BlogController } from './blog.controller.js';
 import { verifyToken } from '../../middlewares/authMiddleware.js';
 import { requireRole } from '../../middlewares/roleMiddleware.js';
 import { publicRateLimit, apiRateLimit } from '../../middlewares/rateLimitMiddleware.js';
+import { publicCache } from '../../middlewares/cacheMiddleware.js';
 
 const router = Router();
 
 // ── Public ────────────────────────────────────────────────────────────────────
-router.get('/latest', publicRateLimit, BlogController.getLatestPosts);
-router.get('/categories', publicRateLimit, BlogController.listCategories);
-router.get('/categories/:slug', publicRateLimit, BlogController.getCategoryBySlug);
-router.get('/', publicRateLimit, BlogController.listPosts);
-router.get('/:slug', publicRateLimit, BlogController.getPostBySlug);
+router.get('/latest', publicRateLimit, publicCache(120), BlogController.getLatestPosts);
+router.get('/categories', publicRateLimit, publicCache(300), BlogController.listCategories);
+router.get('/categories/:slug', publicRateLimit, publicCache(300), BlogController.getCategoryBySlug);
+router.get('/', publicRateLimit, publicCache(120), BlogController.listPosts);
+router.get('/:slug', publicRateLimit, publicCache(120), BlogController.getPostBySlug);
 
 // ── Admin/staff ───────────────────────────────────────────────────────────────
 router.get('/admin/all', verifyToken, apiRateLimit, BlogController.adminListPosts);

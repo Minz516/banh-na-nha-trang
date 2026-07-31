@@ -11,7 +11,6 @@ const NAV_LINKS = [
   { href: '/', label: 'Trang chủ' },
   { href: '/products', label: 'Sản phẩm' },
   { href: '/blog', label: 'Câu chuyện' },
-  { href: '/about', label: 'Về chúng tôi' },
 ];
 
 export async function Header() {

@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import { env } from "./env.js";
+import { logger } from "./logger.config.js";
 
 export function configureCloudinary(): void {
   if (
@@ -12,9 +13,9 @@ export function configureCloudinary(): void {
       api_key: env.CLOUDINARY_API_KEY,
       api_secret: env.CLOUDINARY_API_SECRET,
     });
-    console.log("✅ Cloudinary configured");
+    logger.info("✅ Cloudinary configured");
   } else {
-    console.warn(
+    logger.warn(
       "⚠️  Cloudinary not configured — falling back to picsum.photos stubs in dev",
     );
   }

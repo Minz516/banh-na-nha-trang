@@ -12,7 +12,7 @@ import {
 export const BlogController = {
   // ── Post Categories ────────────────────────────────────────────────────────
 
-  async listCategories(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listCategories(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const cats = await BlogService.listCategories();
       res.json({ success: true, data: cats });
